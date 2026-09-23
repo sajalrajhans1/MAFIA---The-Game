@@ -9,6 +9,7 @@ const FRAMES = {
   face: { target: [0, 1.285, 0.02], size: 0.15, lift: 0.02, fov: 22 },
   bust: { target: [0, 1.2, 0.02], size: 0.26, lift: 0.07, fov: 24 },
   full: { target: [0, 1.0, 0.12], size: 0.58, lift: 0.38, fov: 28 },
+  slot: { target: [0, 1.225, 0.02], size: 0.19, lift: 0.05, fov: 24 }, // the little portrait on the title screen
 };
 
 export class LookPreview {

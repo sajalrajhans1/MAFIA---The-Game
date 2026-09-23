@@ -97,7 +97,7 @@ const actions = {
   },
   wardrobeFrame: f => { preview.setFrame(f); local.set('mafia.wdFrame', f); },
   wardrobeClosed: () => {
-    preview.attach(document.getElementById('lookSlot'), 'bust', false);
+    preview.attach(document.getElementById('lookSlot'), 'slot', false);
     // in a lobby, everyone at the table sees the new outfit
     if (net && view && view.phase === 'lobby') send({ t: 'look', look: myLook });
   },
@@ -111,6 +111,7 @@ const ui = new UI(actions);
 ui.renderIdentity(myName, myLook);
 const preview = new LookPreview(document.getElementById('lookPreview'));
 preview.onFrame = f => { ui.markFrame(f); local.set('mafia.wdFrame', f); };
+preview.setFrame('slot');
 preview.setLook(myLook);
 preview.start();
 ui.setRejoin(session.get('mafia.last', null));

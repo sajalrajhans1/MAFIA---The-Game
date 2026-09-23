@@ -179,8 +179,14 @@ export class LookPreview {
   start() {
     if (this.running) return;
     this.running = true;
+    let next = 0;
     const loop = () => {
       if (!this.running) return;
+      requestAnimationFrame(loop);
+      // the little title portrait is fine at 30 fps; the wardrobe gets 60
+      const now = performance.now(), step = this.interactive ? 1000 / 60 : 1000 / 30;
+      if (now < next - 2) return;
+      next = Math.max(next + step, now - step);
       const dt = Math.min(0.05, this.clock.getDelta());
       if (this.char && this.canvas.offsetParent !== null) {
         const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
@@ -189,7 +195,6 @@ export class LookPreview {
         this.char.update(dt, performance.now());
         this.renderer.render(this.scene, this.camera);
       }
-      requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
   }

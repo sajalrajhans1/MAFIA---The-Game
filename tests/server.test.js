@@ -68,7 +68,7 @@ function assertNoLeaks(room, label) {
     for (const p of v.players) {
       if (p.pid === viewer.pid) continue;
       const real = s.byId(p.pid);
-      const allowed = (viewer.role === 'mafia' && real.role === 'mafia') || (!real.alive && s.settings.reveal);
+      const allowed = viewer.role === 'mafia' && real.role === 'mafia'; // cards are never revealed on death
       if (p.role && !allowed) { ok(false, `${label}: ${viewer.name} (${viewer.role}) can see ${real.name}'s role ${p.role}`); return; }
       if (p.nightPick && viewer.role !== 'mafia') { ok(false, `${label}: non-mafia sees night picks`); return; }
     }
@@ -107,10 +107,11 @@ section('settings: only the host, values clamped');
   fill(r, 6);
   r.send('c1', { t: 'settings', settings: { mafia: 3 } });
   ok(r.server.settings.mafia === DEFAULT_SETTINGS.mafia, 'non-host cannot change settings');
-  r.send('local', { t: 'settings', settings: { mafia: 99, dayTime: -5, voteTime: 'abc', nightTime: 1e9, reveal: 0, sheriff: 'yes' } });
+  r.send('local', { t: 'settings', settings: { mafia: 99, dayTime: -5, voteTime: 'abc', nightTime: 1e9, angel: 0, sheriff: 'yes', reveal: true, selfSave: false } });
   const S = r.server.settings;
   ok(S.mafia === 5 && S.dayTime === 30 && S.voteTime === DEFAULT_SETTINGS.voteTime && S.nightTime === 120, 'numbers clamped / garbage ignored');
-  ok(S.reveal === false && S.sheriff === true, 'booleans coerced');
+  ok(S.angel === false && S.sheriff === true, 'booleans coerced');
+  ok(!('reveal' in S) && !('selfSave' in S), 'there is no card-reveal or self-save setting');
   r.send('local', { t: 'settings', settings: null });
   r.send('local', { t: 'settings', settings: 'x' });
   ok(true, 'null/string settings do not crash');
@@ -207,18 +208,29 @@ section('night: mafia kill, angel save, sheriff check');
   ok(r.server.announce && /found dead/.test(r.server.announce.text), 'dawn announces the death');
 }
 
-section('angel self-save: once per game');
+section('angel: may protect themselves, never the same person two nights running');
 {
-  const { r } = startedRoom(6, { mafia: 1 });
+  const { r } = startedRoom(7, { mafia: 1 });
   toPhase(r, 'night');
   const angel = r.byRole('angel')[0];
-  ok(r.server.viewFor(angel).me.targets.includes(angel.pid), 'angel may target self first');
+  const targets = () => r.server.viewFor(angel).me.targets;
+  ok(targets().includes(angel.pid), 'angel may protect themselves');
   r.send(angel.conn, { t: 'act', target: angel.pid });
+  const m = r.byRole('mafia')[0];
+  r.send(m.conn, { t: 'act', target: angel.pid });
   r.server.advance();
+  ok(angel.alive, 'a self-protected angel survives the Joker');
   toPhase(r, 'night');
-  ok(!r.server.viewFor(angel).me.targets.includes(angel.pid), 'self-save not offered again');
-  r.send('local', { t: 'settings', settings: { selfSave: false } });
-  ok(r.server.settings.selfSave === true, 'settings frozen once the game started');
+  if (angel.alive) {
+    ok(!targets().includes(angel.pid), 'but not two nights in a row');
+    const other = r.server.alive().find(p => p !== angel && p.role !== 'mafia');
+    r.send(angel.conn, { t: 'act', target: other.pid });
+    r.server.advance();
+    toPhase(r, 'night');
+    if (angel.alive) ok(targets().includes(angel.pid), 'self-protection comes back the night after');
+  }
+  r.send('local', { t: 'settings', settings: { sheriff: false } });
+  ok(r.server.settings.sheriff === true, 'settings frozen once the game started');
 }
 
 section('voting: plurality, ties, skips, dead voters');
@@ -300,17 +312,32 @@ section('win conditions');
   ok(r2.server.phase === 'deal', 'a second game can be dealt');
 }
 
-section('reveal off: dead roles stay hidden from the living');
+section('cards stay secret when someone dies');
 {
-  const { r } = startedRoom(7, { reveal: false });
+  const { r } = startedRoom(7);
   toPhase(r, 'night');
-  const victim = r.byRole('civilian')[0];
-  r.server.kill(victim);
+  const mafia = r.byRole('mafia');
+  const victim = r.byRole('sheriff')[0];
+  r.clear();
+  for (const m of mafia) r.send(m.conn, { t: 'act', target: victim.pid });
+  r.server.advance();
+  ok(!victim.alive, 'the sheriff was killed');
   const viewer = r.server.alive().find(p => p.role !== 'mafia');
   const pv = r.server.viewFor(viewer).players.find(p => p.pid === victim.pid);
   ok(!pv.role && !pv.card, 'living town cannot see the dead card');
-  const ghostView = r.server.viewFor(victim);
-  ok(ghostView.players.every(p => p.role), 'the dead see everything');
+  const texts = r.chats(viewer.conn).map(m => m.text).concat(r.server.announce.text);
+  ok(!texts.some(t => /Sheriff|King|K♠|\(Civilian\)|\(Angel\)|\(Mafia\)/.test(t)), 'no message names the dead card');
+  ok(r.server.viewFor(victim).players.every(p => p.role), 'the dead see everything');
+  // an execution keeps the card hidden too
+  toPhase(r, 'vote');
+  const alive = r.server.alive();
+  const target = alive.find(p => p.role !== 'mafia');
+  for (const p of alive) if (p !== target) r.send(p.conn, { t: 'act', target: target.pid });
+  r.server.advance(); r.server.advance();
+  ok(!target.alive, 'executed');
+  const v2 = r.server.viewFor(r.server.alive().find(p => p.role !== 'mafia')).players.find(p => p.pid === target.pid);
+  ok(!v2.role && !v2.card, 'an executed card stays hidden from the living');
+  ok(!/Civilian|Angel|Sheriff|Mafia/.test(r.server.announce.text), 'the execution announcement hides the card');
 }
 
 section('disconnect, rejoin, kick');
@@ -439,13 +466,13 @@ section('single player: full games against the cast');
     r.join('local', 'Me', 'me', { bots: nb });
     const s = r.server;
     const maxM = Math.floor(s.players.length / 2 - 0.5);
-    r.send('local', { t: 'settings', settings: { mafia: 1 + rnd(Math.max(1, maxM)), wits: rnd(3), reveal: Math.random() < 0.85 } });
+    r.send('local', { t: 'settings', settings: { mafia: 1 + rnd(Math.max(1, maxM)), wits: rnd(3) } });
     r.send('local', { t: 'start' });
     if (s.phase !== 'deal') continue;
     games++;
     const active = g % 2 === 0; // half the games the human plays, half they just watch
     try {
-      for (let k = 0; k < 6000 && s.phase !== 'over'; k++) {
+      for (let k = 0; k < 16000 && s.phase !== 'over'; k++) {
         if (active && Math.random() < 0.02) {
           const me = s.players[0];
           const v = s.viewFor(me);
@@ -483,7 +510,7 @@ section('fuzz: random play and hostile traffic, 300 games');
     const n = 4 + rnd(9);
     const ids = fill(r, n);
     const maxM = Math.floor((n - 1) / 2);
-    r.send('local', { t: 'settings', settings: { mafia: 1 + rnd(maxM), sheriff: Math.random() < 0.8, angel: Math.random() < 0.8, reveal: Math.random() < 0.7, selfSave: Math.random() < 0.5 } });
+    r.send('local', { t: 'settings', settings: { mafia: 1 + rnd(maxM), sheriff: Math.random() < 0.8, angel: Math.random() < 0.8 } });
     r.send('local', { t: 'start' });
     if (r.server.phase !== 'deal') continue;
     games++;

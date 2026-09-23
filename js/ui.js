@@ -319,7 +319,7 @@ export class UI {
       notes.push('<div class="label" style="margin-top:6px">INVESTIGATIONS</div>');
       for (const r of me.results) notes.push(`<div class="note ${r.mafia ? 'bad' : 'good'}">N${r.day}: ${esc(r.name)} — ${r.mafia ? 'MAFIA' : 'not Mafia'}</div>`);
     }
-    if (me.role === 'angel' && me.angelLast && me.alive) { const p = byId(me.angelLast); if (p) notes.push(`<div class="note good">Protected last night: ${esc(p.name)} (can't repeat)</div>`); }
+    if (me.role === 'angel' && me.angelLast && me.alive) { const p = byId(me.angelLast); if (p) notes.push(`<div class="note good">Protected last night: ${p.pid === me.pid ? 'yourself' : esc(p.name)} (not again tonight)</div>`); }
     $('myNotes').innerHTML = notes.join('');
 
     // roster
@@ -390,7 +390,7 @@ export class UI {
           t = me.action ? `You investigated <span class="inspect">${name(me.action)}</span>. Result in your notes.` : '<span class="inspect">Click a player to investigate them.</span> The answer is instant — choose well.';
         } else if (me.role === 'angel') {
           t = me.action ? `You are protecting <span class="save">${name(me.action)}</span>.` : '<span class="save">Click a player to protect them tonight.</span>';
-          if (me.targets.includes(me.pid) && me.action !== me.pid) button('PROTECT MYSELF (ONCE)', () => A.pick(me.pid));
+          if (me.targets.includes(me.pid) && me.action !== me.pid) button('PROTECT MYSELF', () => A.pick(me.pid));
           if (me.action) button('CLEAR', () => A.pick(null));
         } else t = '';
         break;
@@ -734,12 +734,12 @@ export class UI {
       </div>
       <h3>THE JOKERS (MAFIA)</h3><p>Know each other. Each night they secretly agree on a victim. They win when they equal or outnumber everyone else.</p>
       <h3>THE KING (SHERIFF)</h3><p>Each night, investigates one player and learns if they are Mafia.</p>
-      <h3>THE ACE (ANGEL)</h3><p>Each night, protects one player from the Mafia. Can't protect the same person two nights in a row.</p>
+      <h3>THE ACE (ANGEL)</h3><p>Each night, protects one player from the Mafia, themselves included, but never the same person two nights in a row.</p>
       <h3>NUMBER CARDS (CIVILIANS)</h3><p>No powers. Talk, deduce, and vote. The town wins when every Joker is gone.</p>
-      <h3>SINGLE PLAYER</h3><p>Play against the regulars: eleven characters with their own tempers, habits and tells. They read the votes, remember who lied, and they listen to you. Name someone to accuse them, ask <i>"who do you suspect?"</i>, ask <i>"Rosa, what about Sal?"</i>, claim your card (<i>"I'm the King, Sal is a Joker"</i>) or plead your innocence. As a Joker, whisper a name at night and your partners will follow.</p>
+      <h3>SINGLE PLAYER</h3><p>Mafia is best with real friends, but you can practise against bots: the regulars: eleven characters with their own tempers, habits and tells. They read the votes, remember who lied, and they listen to you. Name someone to accuse them, ask <i>"who do you suspect?"</i>, ask <i>"Rosa, what about Sal?"</i>, claim your card (<i>"I'm the King, Sal is a Joker"</i>) or plead your innocence. As a Joker, whisper a name at night and your partners will follow.</p>
       <h3>A ROUND</h3>
       <p><b style="color:var(--ice)">NIGHT</b> — the town sleeps; the Jokers, King and Ace act by clicking a player.</p>
-      <p><b style="color:var(--amber)">DAWN</b> — find out who died (and see their card).</p>
+      <p><b style="color:var(--amber)">DAWN</b> — find out who died. Cards stay secret: the dead take theirs to the grave, and every card is shown when the game ends.</p>
       <p><b style="color:var(--amber)">DAY</b> — discuss in the chat. Accuse, defend, bluff.</p>
       <p><b style="color:#ff5a5f">VOTE</b> — click a player to accuse them. Most votes is condemned, gets last words, then is executed. Ties and skips spare everyone.</p>
       <h3>CONTROLS</h3>

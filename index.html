@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MAFIA · A game of cards &amp; lies</title>
-<meta name="description" content="A first-person noir Mafia card game in your browser. Play solo against eleven scheming regulars or open a room for friends. Draw a Joker and you're Mafia, a King and you're the Sheriff, an Ace and you're the Angel.">
+<meta name="description" content="A first-person noir Mafia card game in your browser. Open a room for 4 to 12 friends, or practise solo against bots. Draw a Joker and you're Mafia, a King and you're the Sheriff, an Ace and you're the Angel.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="MAFIA · A game of cards &amp; lies">
-<meta property="og:description" content="Sit at a smoky card table, draw your role, and find the Jokers before they find you. Solo against the regulars or with friends. Free, in your browser.">
+<meta property="og:description" content="Sit at a smoky card table with your friends, draw your role, and find the Jokers before they find you. Free, in your browser.">
 <meta property="og:image" content="https://raw.githubusercontent.com/sajalrajhans1/MAFIA---The-Game/main/assets/img/title.jpg">
 <meta property="og:image:width" content="1920">
 <meta property="og:image:height" content="1080">
 <meta property="og:image:alt" content="Three men in fedoras at a smoky card table">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MAFIA · A game of cards &amp; lies">
-<meta name="twitter:description" content="A first-person noir Mafia card game. Solo against the regulars or with friends. Free, in your browser.">
+<meta name="twitter:description" content="A first-person noir Mafia card game for you and your friends. Free, in your browser.">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/sajalrajhans1/MAFIA---The-Game/main/assets/img/title.jpg">
 <meta name="twitter:image:alt" content="Three men in fedoras at a smoky card table">
 <meta name="theme-color" content="#0a0506">
@@ -59,15 +59,17 @@
             <button id="btnWardrobe" class="btn small">WARDROBE</button>
           </div>
         </div>
-        <button id="btnSolo" class="btn big primary">SINGLE PLAYER</button>
-        <button id="btnFriends" class="btn big">PLAY WITH FRIENDS</button>
+        <button id="btnFriends" class="btn big primary">PLAY WITH FRIENDS<span class="rec">RECOMMENDED</span></button>
+        <button id="btnSolo" class="btn big">SINGLE PLAYER<span class="sub">VS BOTS</span></button>
+        <p class="menu-note">Mafia is best with real friends: we recommend opening a room. Single player is you against bots.</p>
         <button id="btnRejoin" class="btn hidden">REJOIN ROOM</button>
         <div class="menu-row">
           <button id="btnHow" class="btn">HOW TO PLAY</button>
           <button id="btnOpts" class="btn">OPTIONS</button>
         </div>
+        <a class="btn kofi" id="btnKofi" href="https://ko-fi.com/sajalrajhans" target="_blank" rel="noopener noreferrer">♥ DONATE TO THE DEVELOPER</a>
       </div>
-      <div class="title-foot">SOLO VS THE REGULARS · OR 4–12 FRIENDS</div>
+      <div class="title-foot">BEST WITH 4–12 FRIENDS · FREE</div>
     </div>
   </section>
 
@@ -77,7 +79,7 @@
       <div class="panel solocard hidden" id="soloCard">
         <div class="label">SINGLE PLAYER</div>
         <div class="solo-title">THE BACK ROOM</div>
-        <div class="solo-sub">You against the regulars.</div>
+        <div class="solo-sub">You against the regulars (bots).</div>
         <div class="set-row"><span class="set-name">Opponents</span><span class="stepper"><button class="arrow" data-bots="-1">−</button><span id="setBots">7</span><button class="arrow" data-bots="1">+</button></span></div>
         <div class="set-row wits-row"><span class="set-name">Their wits</span></div>
         <div class="wits" id="wits"><button data-wits="0">ROOKIE</button><button data-wits="1">WISEGUY</button><button data-wits="2">MASTERMIND</button></div>
@@ -108,8 +110,6 @@
         <div class="set-row"><span class="set-name">Day talk</span><span class="stepper"><button class="arrow" data-set="dayTime" data-d="-1">−</button><span id="setDay"></span><button class="arrow" data-set="dayTime" data-d="1">+</button></span></div>
         <div class="set-row"><span class="set-name">Voting</span><span class="stepper"><button class="arrow" data-set="voteTime" data-d="-1">−</button><span id="setVote"></span><button class="arrow" data-set="voteTime" data-d="1">+</button></span></div>
         <div class="set-row"><span class="set-name">Night</span><span class="stepper"><button class="arrow" data-set="nightTime" data-d="-1">−</button><span id="setNight"></span><button class="arrow" data-set="nightTime" data-d="1">+</button></span></div>
-        <div class="set-row"><span class="set-name">Reveal card on death</span><button class="toggle" data-set="reveal"></button></div>
-        <div class="set-row"><span class="set-name">Angel may save self (once)</span><button class="toggle" data-set="selfSave"></button></div>
         <div class="deck-line" id="deckLine"></div>
       </div>
     </div>

@@ -16,7 +16,7 @@ export const ROLES = {
   angel: {
     key: 'angel', team: 'town', name: 'Angel', card: 'The Ace', icon: '✦', glyph: 'A',
     color: '#8fd0ff',
-    blurb: 'You drew the ACE. You are the Angel. Each night, choose one player to protect. If the Mafia strikes them, they survive. You can\'t protect the same person two nights running.',
+    blurb: 'You drew the ACE. You are the Angel. Each night, choose one player to protect. If the Mafia strikes them, they survive. You may protect yourself too, but never the same person two nights running.',
     night: 'Choose someone to protect',
   },
   civilian: {

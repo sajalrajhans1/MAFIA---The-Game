@@ -264,7 +264,7 @@ export const MORE_LINES = {
     "I believe {x}. Nobody would lie about that this early.",
   ],
   claimDoubt: [
-    "Awfully convenient, {x}.", "Could be true. Could be a Joker in a paper crown.", "I'll believe it when I see a body flip, {x}.", "Everybody's a King when the rope comes out, {x}.",
+    "Awfully convenient, {x}.", "Could be true. Could be a Joker in a paper crown.", "I'll believe it when your checks start adding up, {x}.", "Everybody's a King when the rope comes out, {x}.",
     "Prove it, {x}.", "{x} the King? I've seen better bluffs.",
   ],
   angelClaim: [
@@ -314,7 +314,7 @@ export const MORE_LINES = {
 
   // ------------------------------------------------------------ vote
   voteFor: [
-    "Putting my vote on {x}.", "{x}. Sorry, not sorry.", "{x}. Let's see that card.", "My vote goes to {x}.", "{x}, it's been nice knowing you.", "I'm with the {x} crowd.",
+    "Putting my vote on {x}.", "{x}. Sorry, not sorry.", "{x}. Let's see if I'm right.", "My vote goes to {x}.", "{x}, it's been nice knowing you.", "I'm with the {x} crowd.",
     "Vote cast. {x}.", "Adios, {x}.", "{x}. Prove me wrong.",
   ],
   voteSkip: ["Skip. Not enough to go on.", "I'm not hanging anyone blind.", "Skip. I won't gamble a life on a hunch.", "Pass."],

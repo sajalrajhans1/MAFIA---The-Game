@@ -138,6 +138,11 @@ input[type=range] { width: 100%; accent-color: var(--brass); }
 .menu { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
 .menu .btn { width: 100%; }
 .menu-row { display: flex; gap: 10px; }
+.menu .btn .rec, .menu .btn .sub { display: block; font-size: 7px; letter-spacing: 2px; margin-top: 6px; opacity: 0.85; }
+.menu .btn .rec { color: #ffd9a0; }
+.menu-note { margin: -2px 2px 0; font-size: 17px; line-height: 1.1; color: var(--dim); }
+.btn.kofi { display: block; text-align: center; text-decoration: none; font-size: 9px; padding: 10px 8px; background: #2a0f12; border-color: #ff5e5b; color: #ffc9c4; }
+.btn.kofi:hover { background: #ff5e5b; color: #1a0506; }
 .menu-row .btn { flex: 1; font-size: 9px; padding: 10px 6px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .who { display: flex; gap: 14px; align-items: stretch; }

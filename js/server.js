@@ -1,16 +1,16 @@
 // Authoritative game host. Runs inside the host's browser tab. Every client (including the
 // host's own) talks to it through messages; it sends each player a personalised view so
 // nobody can peek at hidden roles. In single player it also runs the bot cast.
-import { buildDeal, ROLES, cardLabel } from './cards.js';
+import { buildDeal } from './cards.js';
 import { sanitizeLook } from './looks.js';
 import { BotDirector } from './bots.js';
 
 export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 12;
+// Cards are never revealed when someone dies; they're only shown to the dead and at the end.
 export const DEFAULT_SETTINGS = {
   mafia: 1, sheriff: true, angel: true,
   dayTime: 120, voteTime: 45, nightTime: 40,
-  reveal: true, selfSave: true,
 };
 export const SOLO_SETTINGS = { ...DEFAULT_SETTINGS, mafia: 2, dayTime: 150, voteTime: 40, nightTime: 35, wits: 1 };
 const DEAL_TIME = 35, DAWN_TIME = 7, LAST_WORDS_TIME = 16, VERDICT_TIME = 7;
@@ -18,7 +18,6 @@ const DEAL_TIME = 35, DAWN_TIME = 7, LAST_WORDS_TIME = 16, VERDICT_TIME = 7;
 const now = () => Date.now();
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const rid = () => Math.random().toString(36).slice(2, 9);
-const roleName = p => (ROLES[p.role] || ROLES.civilian).name;
 
 function cleanName(s) {
   return String(s || '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 14) || 'Stranger';
@@ -44,7 +43,6 @@ export class GameServer {
     this.accused = null;
     this.winner = null;
     this.angelLast = null;
-    this.selfSaveUsed = false;
     this.sheriffResults = [];
     this._flushQueued = false;
     this.director = this.solo ? new BotDirector(this) : null;
@@ -194,7 +192,7 @@ export class GameServer {
         ready: (this.phase === 'deal' || this.phase === 'day') ? q.ready : false,
       };
       if (inGame) {
-        const visible = q === me || seeAll || (me.role === 'mafia' && q.role === 'mafia') || (!q.alive && this.settings.reveal);
+        const visible = q === me || seeAll || (me.role === 'mafia' && q.role === 'mafia');
         if (visible) { o.role = q.role; o.card = q.card; }
         if (showVotes) o.vote = q.vote;
         if (this.phase === 'night' && q.action && ((me.role === 'mafia' && q.role === 'mafia') || seeAll)) o.nightPick = q.action;
@@ -222,7 +220,6 @@ export class GameServer {
         channel: this.channelFor(me),
         results: me.role === 'sheriff' || seeAll ? this.sheriffResults : [],
         angelLast: me.role === 'angel' ? this.angelLast : null,
-        selfSaveUsed: this.selfSaveUsed,
       },
     };
   }
@@ -241,11 +238,8 @@ export class GameServer {
     return this.alive().filter(q => {
       if (kind === 'kill') return q.role !== 'mafia';
       if (kind === 'inspect') return q !== p;
-      if (kind === 'save') {
-        if (q.pid === this.angelLast) return false;
-        if (q === p) return this.settings.selfSave && !this.selfSaveUsed;
-        return true;
-      }
+      // the Angel may protect anyone, themselves included, but never the same person two nights running
+      if (kind === 'save') return q.pid !== this.angelLast;
       if (kind === 'vote') return q !== p;
       return false;
     }).map(q => q.pid);
@@ -331,7 +325,7 @@ export class GameServer {
     if ('voteTime' in s) S.voteTime = clampI(s.voteTime, 15, 180, S.voteTime);
     if ('nightTime' in s) S.nightTime = clampI(s.nightTime, 15, 120, S.nightTime);
     if ('wits' in s && this.solo) S.wits = clampI(s.wits, 0, 2, S.wits);
-    for (const k of ['sheriff', 'angel', 'reveal', 'selfSave']) if (k in s) S[k] = !!s[k];
+    for (const k of ['sheriff', 'angel']) if (k in s) S[k] = !!s[k];
     this.dirty();
   }
 
@@ -345,7 +339,7 @@ export class GameServer {
     } else if (p.alive) {
       p.connected = false;
       this.kill(p, 'left');
-      this.sys(`${p.name} walked out of the game.${this.settings.reveal ? ` Their card: ${cardLabel(p.card)} (${roleName(p)}).` : ''}`, { kind: 'death' });
+      this.sys(`${p.name} walked out of the game.`, { kind: 'death' });
       if (this.phase !== 'over') this.checkWin();
     }
     this.dirty();
@@ -371,7 +365,6 @@ export class GameServer {
     this.accused = null;
     this.announce = null;
     this.angelLast = null;
-    this.selfSaveUsed = false;
     this.sheriffResults = [];
     this.history = [];
     this.fx('deal');
@@ -515,14 +508,12 @@ export class GameServer {
     const angel = this.alive().find(p => p.role === 'angel');
     const save = angel ? angel.action : null;
     this.angelLast = save || null;
-    if (angel && save === angel.pid) this.selfSaveUsed = true;
     const victim = target && target !== save ? this.byId(target) : null;
     let saved = false;
     if (victim && victim.alive) {
       this.kill(victim, 'night');
-      const reveal = this.settings.reveal ? ` Their card: ${cardLabel(victim.card)} (${roleName(victim)}).` : '';
-      this.announce = { kind: 'death', title: 'DAWN', text: `${victim.name} was found dead in the morning.${reveal}`, pid: victim.pid };
-      this.sys(`☠ ${victim.name} was killed during the night.${reveal}`, { kind: 'death' });
+      this.announce = { kind: 'death', title: 'DAWN', text: `${victim.name} was found dead in the morning. Their card goes to the grave with them.`, pid: victim.pid };
+      this.sys(`☠ ${victim.name} was killed during the night.`, { kind: 'death' });
       this.fx('kill', { pid: victim.pid });
     } else if (target && target === save) {
       saved = true;
@@ -591,9 +582,8 @@ export class GameServer {
     if (q && q.alive) {
       voters = this.alive().filter(p => p.vote === q.pid).map(p => p.pid);
       this.kill(q, 'vote');
-      const reveal = this.settings.reveal ? ` Their card: ${cardLabel(q.card)} (${roleName(q)}).` : '';
-      this.announce = { kind: 'death', title: 'EXECUTED', text: `${q.name} was executed by the town.${reveal}`, pid: q.pid };
-      this.sys(`☠ ${q.name} was executed.${reveal}`, { kind: 'death' });
+      this.announce = { kind: 'death', title: 'EXECUTED', text: `${q.name} was executed by the town. Nobody will know their card until the game is over.`, pid: q.pid };
+      this.sys(`☠ ${q.name} was executed.`, { kind: 'death' });
       this.fx('execute', { pid: q.pid });
     }
     this.setPhase('verdict', VERDICT_TIME);

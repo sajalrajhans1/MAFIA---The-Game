@@ -1,6 +1,7 @@
 // Single-player opponents. A BotDirector sits beside the host and plays every bot seat.
 // Bots only use what their seat could know: their own card, fellow Jokers (if Mafia),
-// their own Sheriff checks, and everything public (chat, votes, claims, revealed cards).
+// their own Sheriff checks, and everything public (chat, votes, claims). Cards are never revealed on
+// death, but one thing is public knowledge: the Jokers can't kill their own, so night victims were innocent.
 import { CAST, ALIASES, TICS, LINES, PERSONA_LINES } from './botlines.js';
 import { cardLabel } from './cards.js';
 
@@ -129,11 +130,13 @@ export class BotDirector {
   }
 
   // ------------------------------------------------------------ knowledge
+  // what the whole table can know about someone's side: 'town' for a night victim, otherwise nothing
   publicRole(pid) {
     const p = this.byId(pid);
     if (!p || !p.role) return null;
     if (this.s.phase === 'over') return p.role;
-    return !p.alive && this.s.settings.reveal ? p.role : null;
+    if (p.alive) return null;
+    return this.mem.deaths.some(d => d.pid === pid && d.cause === 'night') ? 'town' : null;
   }
 
   // 1 = known Joker, -1 = known innocent, 0 = unknown (from this bot's seat)
@@ -198,7 +201,13 @@ export class BotDirector {
       byAccuser.set(a.from, Math.max(byAccuser.get(a.from) ?? -9, w));
       // the victims' words carry weight after they die innocent
       const victim = mem.deaths.find(d => d.pid === a.from && d.cause === 'night');
-      if (victim && !victims.has(a.from) && this.publicRole(a.from) !== 'mafia') { victims.add(a.from); add(0.35 * decay, 'r_victimAccused', a.from); }
+      if (victim && !victims.has(a.from) && this.publicRole(a.from) !== 'mafia') { victims.add(a.from); add(0.5 * decay, 'r_victimAccused', a.from); }
+    }
+    const hounded = new Set();
+    for (const a of mem.accusations) {
+      if (a.from !== pid || hounded.has(a.to) || this.publicRole(a.to) !== 'town') continue;
+      hounded.add(a.to);
+      add(0.32 * Math.min(1.3, a.strength), 'r_accusedVictim', a.to);
     }
     let heat = 0;
     for (const w of byAccuser.values()) heat += w;
@@ -406,7 +415,7 @@ export class BotDirector {
   }
 
   onDeath(p, cause) {
-    this.mem.deaths.push({ pid: p.pid, day: this.mem.day, cause, role: this.s.settings.reveal ? p.role : null });
+    this.mem.deaths.push({ pid: p.pid, day: this.mem.day, cause });
   }
 
   onDawn({ victim, saved }) {
@@ -429,17 +438,10 @@ export class BotDirector {
   }
 
   onExecute(q, voters) {
-    const role = this.s.settings.reveal ? q.role : null;
-    this.mem.executions.push({ pid: q.pid, day: this.mem.day, role, voters });
+    // the card stays face down: nobody knows yet whether the town got it right
+    this.mem.executions.push({ pid: q.pid, day: this.mem.day, role: null, voters });
     const talkers = this.bots().filter(b => b.alive).sort(() => Math.random() - 0.5);
-    if (!talkers.length) return;
-    const m = this.mind(talkers[0]);
-    if (role === 'mafia') this.intend(m, { at: 1.2, key: 'execMafia', urg: 3, until: 6 });
-    else if (role) {
-      this.intend(m, { at: 1.2, key: 'execTown', urg: 3, until: 6, vars: { card: cardLabel(q.card) } });
-      const pusher = this.mem.accusations.find(a => a.to === q.pid && a.day === this.mem.day && a.from !== talkers[1]?.pid);
-      if (pusher && talkers[1] && chance(0.6)) this.intend(this.mind(talkers[1]), { at: 3.5, key: 'execTownBlame', vars: { x: this.name(pusher.from) }, urg: 2, until: 5 });
-    }
+    if (talkers.length && chance(0.6)) this.intend(this.mind(talkers[0]), { at: 2, key: 'execUnknown', urg: 3, until: 6 });
   }
 
   onNoExecution() {
@@ -499,12 +501,12 @@ export class BotDirector {
     const dayLen = s.settings.dayTime;
     alive.forEach((b, i) => {
       const m = this.mind(b);
-      m.nextTalk = now + rand(4000, 14000) + i * 1400;
+      m.nextTalk = now + rand(7000, 22000) + i * 2600;
       m.readyAt = now + dayLen * 1000 * rand(0.55, 0.8);
-      m.maxSay = Math.round(1.5 + m.c.talk * 3.5);
+      m.maxSay = Math.round(1 + m.c.talk * 2.4);
     });
     // day one: a couple of openers
-    if (s.day === 1) alive.sort(() => Math.random() - 0.5).slice(0, 2).forEach((b, i) => this.intend(this.mind(b), { at: 3 + i * 4, key: 'firstDay', urg: 2, until: 25 }));
+    if (s.day === 1) alive.sort(() => Math.random() - 0.5).slice(0, 2).forEach((b, i) => this.intend(this.mind(b), { at: 3 + i * 7, key: 'firstDay', urg: 2, until: 25 }));
     // the King speaks up when he has something
     for (const b of alive) {
       const m = this.mind(b);
@@ -624,9 +626,9 @@ export class BotDirector {
     }
     const t = this.topSuspect(m);
     if (!t) return 'skip';
-    if (t.v >= 0.3 * (2 - W.focus)) return t.p.pid;
-    if (leader && leader !== me.pid && tally[leader] >= 2 && this.sus(m, leader) > -0.2 && chance(0.4 + m.c.trust * 0.5)) return leader;
-    return chance(0.55) ? 'skip' : t.p.pid;
+    if (t.v >= 0.22 * (2 - W.focus)) return t.p.pid;
+    if (leader && leader !== me.pid && tally[leader] >= 2 && this.sus(m, leader) > -0.2 && chance(0.5 + m.c.trust * 0.4)) return leader;
+    return chance(0.3) ? 'skip' : t.p.pid;
   }
 
   planLastWords(m) {
@@ -774,7 +776,7 @@ export class BotDirector {
           const x = about[0];
           if (!x.alive) {
             const r = this.publicRole(x.pid);
-            this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: r === 'mafia' ? 'answerDeadJoker' : r ? 'answerDeadCard' : 'answerDead', vars: { x: x.name, card: cardLabel(x.card) } });
+            this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: r === 'town' ? 'answerDeadVictim' : 'answerDead', vars: { x: x.name } });
           } else {
             const v = this.sus(m, x.pid);
             this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: v > 0.35 ? 'answerDistrust' : v < -0.2 ? 'answerTrust' : 'answerNone', vars: { x: x.name } });
@@ -807,7 +809,7 @@ export class BotDirector {
       if (deadNamed && !about.some(p => p.alive) && (RX.mafiaWord.test(text) || RX.voteWord.test(text))) {
         const r = replyFrom(aliveBots, 1)[0];
         const role = this.publicRole(deadNamed.pid);
-        if (r) this.intend(this.mind(r), { at: rand(1.5, 3), urg: 5, key: role === 'mafia' ? 'answerDeadJoker' : role ? 'answerDeadCard' : 'answerDead', vars: { x: deadNamed.name, card: cardLabel(deadNamed.card) } });
+        if (r) this.intend(this.mind(r), { at: rand(1.5, 3), urg: 5, key: role === 'town' ? 'answerDeadVictim' : 'answerDead', vars: { x: deadNamed.name } });
         return;
       }
       for (const x of about.filter(p => p.alive).slice(0, 2)) {
@@ -824,7 +826,7 @@ export class BotDirector {
         if (x.bot && x.alive) this.accused(this.mind(x), h.pid, false);
         // someone else weighs in
         const other = replyFrom(aliveBots.filter(b => b.pid !== x.pid), 1)[0];
-        if (other && chance(0.7)) {
+        if (other && chance(0.5)) {
           const m = this.mind(other);
           const v = this.sus(m, x.pid);
           const key = v > 0.25 ? 'replyVoteOtherAgree' : v < -0.25 ? 'replyVoteOtherDisagree' : 'replyVoteOther';
@@ -877,7 +879,7 @@ export class BotDirector {
     this.mem.accusations.push({ from: m.p.pid, to: pid, day: this.mem.day, strength });
     this.mem.lastAccusedBy.set(m.p.pid, pid);
     const q = this.byId(pid);
-    if (provoke && q && q.bot && q.alive && chance(0.6)) this.accused(this.mind(q), m.p.pid, strength > 1.5);
+    if (provoke && q && q.bot && q.alive && chance(0.45)) this.accused(this.mind(q), m.p.pid, strength > 1.5);
   }
 
   // ------------------------------------------------------------ opinions during the day
@@ -1001,7 +1003,7 @@ export class BotDirector {
       }
     }
     if (now < m.nextTalk || m.said >= m.maxSay) return;
-    m.nextTalk = now + rand(14000, 30000) / (0.6 + m.c.talk);
+    m.nextTalk = now + rand(28000, 52000) / (0.6 + m.c.talk);
     if (this.intents.some(i => i.m === m)) return;
     const o = this.opinion(m);
     this.intend(m, { at: 0, until: 12, urg: 1 + m.c.talk, key: o.key, vars: o.vars, effect: o.effect });
@@ -1049,15 +1051,18 @@ export class BotDirector {
         if (sp.effect) sp.effect();
         sp.m.said++;
       }
-      this.floorAt = now + rand(1500, 3400) * (s.phase === 'night' ? 0.7 : 1);
+      // a breath between speakers, longer by day, so the table is readable
+      this.floorAt = now + rand(3400, 6800) * (s.phase === 'night' ? 0.6 : 1);
       return;
     }
-    if (now < this.floorAt) return;
+    // replies to the player (urgent) may cut the pause short; table chatter waits its turn
+    if (now < this.floorAt - 2600) return;
     if (now < this.humanTypingUntil) return;
     this.intents = this.intents.filter(i => now <= i.until && (i.m.p.alive || i.ch === 'dead' || s.phase === 'lobby' || s.phase === 'over'));
     let best = null;
     for (const i of this.intents) {
       if (now < i.at) continue;
+      if (now < this.floorAt && i.urg < 5) continue;
       if (s.channelFor(i.m.p) !== i.ch && !(s.phase === 'over' && i.ch === 'town')) continue;
       if (!best || i.urg > best.urg) best = i;
     }
@@ -1066,6 +1071,6 @@ export class BotDirector {
     const text = best.make ? best.make() : this.line(best.m, best.key, best.vars || {});
     if (!text) return;
     s.typing(best.m.p, true);
-    this.speaking = { m: best.m, text, ch: best.ch, effect: best.effect, at: now + clamp(500 + text.length * 22, 700, 2400) };
+    this.speaking = { m: best.m, text, ch: best.ch, effect: best.effect, at: now + clamp(900 + text.length * 40, 1500, 4500) };
   }
 }

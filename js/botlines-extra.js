@@ -49,7 +49,7 @@ export const EXTRA_LINES = {
     "Check my votes. Clean as a whistle.", "Me? I'd sooner eat my hat.", "That's a waste of a day, {x}. I'm a {card}.",
   ],
   defendSelfMafia: [
-    "Save it, {x}. I've been clean all night.", "You'll feel real silly when my card flips, {x}.", "I've been hunting Jokers since the deal. Ask anybody.",
+    "Save it, {x}. I've been clean all night.", "You'll feel real silly when the truth comes out, {x}.", "I've been hunting Jokers since the deal. Ask anybody.",
     "Sure, blame the one who's been helping.", "I'm a {card}. Go bark at someone else.", "Take it easy, {x}. Wrong suspect, wrong day.",
     "Hang me and the real Jokers walk out laughing.", "I get it. Somebody has to be the suspect. It isn't me.",
   ],
@@ -127,8 +127,19 @@ export const EXTRA_LINES = {
     "I was saving my breath, {h}. Not anymore.", "You noticed, huh? Fair enough, {h}.",
   ],
   answerDead: ["{x}? {x}'s gone, {h}. Let's worry about the living.", "{x} can't help us now, {h}.", "Leave {x} out of it, {h}. {x} is in the ground."],
-  answerDeadCard: ["{x} was a {card}, {h}. Innocent. We look elsewhere.", "{x}'s card said {card}. Clean. Keep up, {h}.", "{x}? Dead and innocent, {h}. A {card}."],
-  answerDeadJoker: ["{x} was a Joker, {h}, and {x} is already gone. Find the other one.", "{x}'s done. Joker card and all. Who's left, {h}?", "We got {x} already, {h}. Somebody else is still lying."],
+  answerDeadVictim: [
+    "{x} was killed in the night, {h}. The Jokers don't kill their own, so {x} was one of us.", "The Jokers took {x}, {h}. That makes {x} innocent in my book.",
+    "{x}? Murdered at night, {h}. Clean as they come.", "{x} was a victim, {h}, not a suspect. Look at who's still breathing.",
+  ],
+  r_accusedVictim: [
+    "{x} was hounding {y}, and the Jokers killed {y}. {y} was innocent.", "{x} wanted {y} hanged. The Jokers got {y} first, so {y} was one of us.",
+    "Remember who went after {y}? {x}. And {y} was clean.", "{x} pushed hard on {y}. {y} turned up dead and innocent.",
+  ],
+  execUnknown: [
+    "Done. I hope we got the right one.", "We won't see that card until it's all over. Pray we're right.", "One less liar. Or one less friend. Time will tell.",
+    "If the killing stops, we got a Joker.", "Tonight will tell us if we were right.", "That's done. Nobody gloat until the sun comes up.",
+    "Face down, forever. Great. Now we wait.", "I'll sleep with one eye open, just in case we got it wrong.",
+  ],
   ghostReply: ["Welcome, {h}. The view's better up here.", "Hey {h}. Want to watch them squirm?", "{h}! Come watch the living fumble."],
 };
 

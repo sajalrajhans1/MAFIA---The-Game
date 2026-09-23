@@ -1,35 +1,24 @@
 # MAFIA · A game of cards & lies
 
 A first-person Mafia card game that runs in the browser. You sit at a smoky 1940s card table,
-you're dealt one card in secret, and that card is your role. Play **solo against eleven scheming
-regulars**, or **open a room for your friends**.
+you're dealt one card in secret, and that card is your role. **It's made to be played with real friends**:
+open a room and send them the link. There's also a single player mode against bots for practice.
+
+**Enjoying it? [Buy the developer a coffee on Ko-fi ♥](https://ko-fi.com/sajalrajhans)**
 
 | Card | Role | Power |
 |---|---|---|
 | **Joker** | Mafia | Each night the Jokers agree on a victim. They win when they equal or outnumber everyone else. |
 | **King** | Sheriff | Each night, investigates one player and learns if they're Mafia. |
-| **Ace** | Angel | Each night, protects one player from the Mafia (not the same person two nights running). |
+| **Ace** | Angel | Each night, protects one player from the Mafia, themselves included, but never the same person two nights running. |
 | **2–10** | Civilian | No powers. Talk, deduce, vote. |
+
+Cards stay secret for the whole game: when someone dies or is executed, nobody learns what they were.
+All cards are shown when the game ends.
 
 ## Two ways to play
 
-### Single player: the back room
-
-You against the regulars. It's the same eleven faces every time, each with a temper, verbal tics and
-tells of their own: Vinnie the Enforcer, Rosa the Bookkeeper, Sal the Nose, Dolores the Songbird,
-Lucky Lou, Frankie Nine-Fingers, Mae the Landlady, Tommy the Rookie, Bugsy the Hothead,
-Carmela the Widow and Doc the Professor.
-
-- Pick how many sit down (3 to 11) and how sharp they are: **Rookie**, **Wiseguy** or **Mastermind**.
-- They only know what their seat could know: their own card, their partners if they're Jokers, their
-  own Sheriff checks, and everything said and voted in the open. They remember who pushed an innocent
-  onto the gallows, who defended a Joker, and who claimed what.
-- **Talk to them.** Name someone to accuse them, ask *"who do you suspect?"*, ask
-  *"Rosa, what about Sal?"*, claim your card (*"I'm the King, Sal is a Joker"*) or plead your innocence.
-  They answer, argue, bluff, fake-claim, bandwagon and throw a partner under the bus.
-- Draw a Joker and your partners whisper with you at night. Name a victim and they'll follow.
-
-### With friends: rooms
+### With friends: rooms (recommended)
 
 1. Click **PLAY WITH FRIENDS → OPEN A ROOM**. You're the host.
 2. Share the 5-letter code, or click **COPY INVITE LINK** and send it.
@@ -38,6 +27,23 @@ Carmela the Widow and Doc the Professor.
 
 Rooms are people only. Game traffic goes peer to peer (WebRTC via the free PeerJS signalling
 server), so there's no game server to run.
+
+### Single player: the back room (bots)
+
+Single player only has bots. You play against the regulars. It's the same eleven faces every time, each with a temper, verbal tics and
+tells of their own: Vinnie the Enforcer, Rosa the Bookkeeper, Sal the Nose, Dolores the Songbird,
+Lucky Lou, Frankie Nine-Fingers, Mae the Landlady, Tommy the Rookie, Bugsy the Hothead,
+Carmela the Widow and Doc the Professor.
+
+- Pick how many sit down (3 to 11) and how sharp they are: **Rookie**, **Wiseguy** or **Mastermind**.
+- They only know what their seat could know: their own card, their partners if they're Jokers, their
+  own Sheriff checks, and everything said and voted in the open. Since cards stay hidden, they reason the way
+  players do: the Jokers never kill their own, so night victims were innocent, and whoever hounded a victim
+  looks worse for it. They remember accusations, defences and claims.
+- **Talk to them.** Name someone to accuse them, ask *"who do you suspect?"*, ask
+  *"Rosa, what about Sal?"*, claim your card (*"I'm the King, Sal is a Joker"*) or plead your innocence.
+  They answer, argue, bluff, fake-claim, bandwagon and throw a partner under the bus.
+- Draw a Joker and your partners whisper with you at night. Name a victim and they'll follow.
 
 ## The wardrobe
 
@@ -55,7 +61,7 @@ At night, fellow Jokers see each other's eyes glow red.
 1. **The deal.** Click your card to flip it. Keep it secret.
 2. **Night.** Civilians sleep. The Jokers pick a victim together in a secret chat; the King
    investigates; the Ace protects. If the Jokers can't agree in time, fate picks a victim.
-3. **Dawn.** Find out who died and see their card.
+3. **Dawn.** Find out who died. Their card stays secret.
 4. **Day.** Discuss. Speech bubbles pop over the speaker's head; use emotes (nod, shrug, point...).
    When a majority is ready, voting starts early.
 5. **Vote.** Click the player you accuse. Most votes gets last words, then is executed.
@@ -91,10 +97,12 @@ repository, so they work on any host. If you make the repository private, point 
 
 ## Graphics & performance
 
-**OPTIONS → Graphics** defaults to **AUTO**: it guesses a tier from your GPU, then watches frame times
-and steps between LOW, MEDIUM and HIGH on its own (ULTRA is manual). LOW drops shadows, bloom, MSAA
-and decorative lights and renders at a lower resolution, so it runs on old laptops and integrated GPUs.
-Each character is a handful of skinned meshes, which keeps the CPU cost low.
+The game is built to stay light. It renders at most 60 frames a second (high-refresh screens don't redraw
+the table 144 times a second), pauses when the tab is hidden, and **OPTIONS → Graphics** defaults to
+**AUTO**: it starts on MEDIUM (LOW on phones and weak GPUs), watches frame times, drops a tier as soon as
+the game dips below ~45 fps and only climbs back after sustained headroom (ULTRA is manual). LOW drops
+shadows, bloom, MSAA and decorative lights and renders at a lower resolution, so it runs on old laptops
+and integrated GPUs. Each character is a handful of skinned meshes, which keeps the CPU cost low.
 
 ## How it's built
 
@@ -129,6 +137,10 @@ js/textures.js      procedural textures
 js/ui.js            HUD, chat, name tags, overlays, wardrobe, modals
 js/audio.js         synthesized music and sound
 ```
+
+## Support
+
+This game is free. If you'd like to support it: **[ko-fi.com/sajalrajhans](https://ko-fi.com/sajalrajhans)**
 
 ## Development
 

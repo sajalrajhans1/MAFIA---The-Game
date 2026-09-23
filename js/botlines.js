@@ -204,7 +204,7 @@ export const LINES = {
   fakeClaimClean: ['I\'m the King, actually. {x} is clean. I checked last night.', 'Sheriff here. {x} is innocent, so back off.'],
   claimBelieve: ['A King at the table. I\'ll follow your lead.', 'Alright, badge. I believe you.', 'Finally, some real information.', 'If {x} is the King, I\'m listening.'],
   claimDoubt: [
-    'Two Kings? One of you is lying through your teeth.', 'Convenient time to become the King, {x}.', 'I\'ll believe you\'re the King when your target flips a Joker.',
+    'Two Kings? One of you is lying through your teeth.', 'Convenient time to become the King, {x}.', 'I\'ll believe you\'re the King when your story holds up for another day.',
     'Anybody can say they\'re the King, {x}.',
   ],
   angelClaim: ['I\'m the Ace. I saved {x} on night {n}.', 'I\'m the Angel. {x} is alive because of me.', 'Ace here. I kept {x} breathing. Don\'t make me regret it.'],

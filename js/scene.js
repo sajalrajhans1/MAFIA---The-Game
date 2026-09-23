@@ -169,9 +169,9 @@ export class World {
       const r = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
       if (/swiftshader|llvmpipe|software|basic render|microsoft basic/i.test(r)) return 'low';
       const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-      if (mobile || /intel|mali|adreno|powervr|videocore|apple gpu/i.test(r) || (navigator.hardwareConcurrency || 8) <= 4) return 'medium';
+      if (/mali|adreno|powervr|videocore/i.test(r) || (mobile && (navigator.hardwareConcurrency || 8) <= 4) || (navigator.hardwareConcurrency || 8) <= 2) return 'low';
     } catch { /* ignore */ }
-    return 'high';
+    return 'medium';
   }
 
   // mode: 'auto' | 'low' | 'medium' | 'high' | 'ultra'
@@ -222,14 +222,14 @@ export class World {
     P.acc = 0; P.n = 0;
     if (P.skip > 0) { P.skip--; return; } // shader compiles right after a change
     const i = TIER_ORDER.indexOf(this.tier), t = performance.now() / 1000;
-    if (avg > 1 / 40 && i > 0) {
+    if (avg > 1 / 45 && i > 0) {
       if (P.dir === 'up' && t - P.last < 12) P.blockUp[this.tier] = t + 180;
       P.last = t; P.dir = 'down'; P.good = 0;
       this.applyTier(TIER_ORDER[i - 1]);
     } else if (avg < 1 / 56) {
       P.good++;
       const next = TIER_ORDER[i + 1];
-      if (P.good >= 4 && i < 2 && !(P.blockUp[next] > t)) { P.last = t; P.dir = 'up'; P.good = 0; this.applyTier(next); }
+      if (P.good >= 5 && i < 2 && !(P.blockUp[next] > t)) { P.last = t; P.dir = 'up'; P.good = 0; this.applyTier(next); }
     } else P.good = 0;
   }
 
@@ -1192,6 +1192,9 @@ export class World {
 
   // ------------------------------------------------------------------ loop
   frame() {
+    const nowMs = performance.now();
+    if (nowMs < (this.nextFrameAt || 0) - 2) return;
+    this.nextFrameAt = Math.max((this.nextFrameAt || 0) + 1000 / 60, nowMs - 1000 / 60);
     const rawDt = this.clock.getDelta();
     const dt = Math.min(0.05, rawDt);
     if (this.paused) return;

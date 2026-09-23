@@ -276,7 +276,7 @@ function strandNormal() {
   if (strandTex) return strandTex;
   const c = document.createElement('canvas');
   c.width = 128; c.height = 128;
-  const x = c.getContext('2d');
+  const x = c.getContext('2d', { willReadFrequently: true });
   let seed = 11;
   const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   for (let i = 0; i < 128; i++) {

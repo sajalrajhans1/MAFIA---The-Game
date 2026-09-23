@@ -4,7 +4,8 @@ import * as THREE from 'three';
 function canvas(w, h = w) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
-  return [c, c.getContext('2d')];
+  // several of these are read back (normal maps are derived from them), so keep them CPU-side
+  return [c, c.getContext('2d', { willReadFrequently: true })];
 }
 
 function toTex(c, { repeat = 1, srgb = true, aniso = 8 } = {}) {

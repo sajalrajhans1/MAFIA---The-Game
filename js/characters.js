@@ -53,7 +53,7 @@ function faceZ(x, y) {
 }
 
 // a tube along a smooth curve whose radius follows a profile [[t, r], ...]; flat squashes it in z
-function taperTube(pts, prof, { seg = 20, radial = 8, flat = 1 } = {}) {
+function taperTube(pts, prof, { seg = 20, radial = 8, flat = 1, wide = 1 } = {}) {
   const curve = new THREE.CatmullRomCurve3(pts.map(q => new THREE.Vector3(...q)), false, 'centripetal');
   const g = new THREE.TubeGeometry(curve, seg, 1, radial, false);
   const pos = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
@@ -68,6 +68,7 @@ function taperTube(pts, prof, { seg = 20, radial = 8, flat = 1 } = {}) {
       const k = i * (radial + 1) + j;
       v.fromBufferAttribute(pos, k).sub(c).multiplyScalar(r);
       v.z *= flat;
+      v.x *= wide;
       v.add(c);
       pos.setXYZ(k, v.x, v.y, v.z);
     }
@@ -298,19 +299,28 @@ function strandNormal() {
 
 // curls scattered over the crown (golden spiral)
 function curlsGeo() {
+  // tight curls packed over the hair region (inside the hairline), each a small squashed ball
   const parts = [];
-  const n = 26;
+  const n = 150;
+  let seed = 3;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const v = new THREE.Vector3();
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n;
-    const theta = Math.acos(1 - t * 0.9);
+    const y = 1 - t * 1.5; // unit height, from the crown down
+    const r = Math.sqrt(Math.max(0, 1 - y * y));
     const phi = i * 2.39996;
-    const v = new THREE.Vector3(Math.sin(theta) * Math.cos(phi), Math.cos(theta), Math.sin(theta) * Math.sin(phi)).multiplyScalar(0.104);
-    v.applyAxisAngle(new THREE.Vector3(1, 0, 0), -0.45);
-    if (v.z > 0.05 && v.y < 0.07) continue; // keep the forehead clear
+    const a = Math.abs(Math.atan2(Math.sin(phi), Math.cos(phi)));
+    if (y < hairline(HAIRLINE, a) + 0.04) continue;
+    v.set(Math.sin(phi) * r * 0.1, y * 0.1, Math.cos(phi) * r * 0.1);
     sculptPoint(v);
-    const s = new THREE.SphereGeometry(0.019 + (i % 3) * 0.003, 8, 6);
-    s.translate(v.x, v.y, v.z);
-    parts.push(s);
+    v.multiplyScalar(1.075 + rnd() * 0.012);
+    const size = 0.0115 + rnd() * 0.004;
+    const b = new THREE.SphereGeometry(size, 7, 5);
+    b.scale(1, 0.8, 1);
+    b.rotateY(rnd() * 3);
+    b.translate(v.x, v.y, v.z);
+    parts.push(b);
   }
   return mergeGeometries(parts, false);
 }
@@ -743,8 +753,11 @@ export class Character {
     this.add(H, style === 1 ? g.hairSide : g.hairSlick, hairM, null, null, HEAD_SCALE);
     if (style === 1) this.add(H, g.hairSwoop, hairM, [-0.03, 0.098, 0.03], [0.1, 0, 0.35], [1.1, 0.34, 1.25]);
     if (style === 3) {
-      this.add(H, g.quiff, hairM, [0, 0.106, 0.05], [0.35, 0, 0], [1.05, 0.62, 1.1]);
-      this.add(H, g.quiff, hairM, [0.012, 0.118, 0.018], [0.2, 0, 0], [0.85, 0.5, 0.95]);
+      // a pompadour: a roll rising off the hairline and swept back over the crown
+      const roll = variant('pomp', () => taperTube(
+        [[0, 0.07, 0.083], [0, 0.1, 0.066], [0, 0.119, 0.03], [0, 0.121, -0.012], [0, 0.109, -0.05]],
+        [[0, 0.012], [0.2, 0.024], [0.45, 0.024], [0.75, 0.017], [1, 0.006]], { seg: 24, radial: 12, wide: 2.3 }));
+      this.add(H, roll, hairM);
     }
     if (style === 4) this.add(H, g.curls, hairM, null, null, HEAD_SCALE);
   }
@@ -780,7 +793,8 @@ export class Character {
   // Upper and lower lips ride their own bones so they part when the character talks.
   buildMouth(ms) {
     const g = geos(), C = this.C, H = this.head;
-    const MY = -0.0565, MZ = faceZ(0, MY) - 0.0008, MW = 0.0185;
+    const MY = -0.0565, MZ = faceZ(0, MY) - 0.0008;
+    const MW = ms === 2 ? 0.0215 : 0.0185;
     const red = ms >= 6;
     const skinC = new THREE.Color(SKIN_COLORS[this.look.skin]);
     const lipC = red ? new THREE.Color(0x9a1420) : skinC.clone().multiply(new THREE.Color(0.8, 0.56, 0.52)).lerp(new THREE.Color(0x5a2420), 0.15);
@@ -791,7 +805,7 @@ export class Character {
     const shape = ms === 1 ? 'smirk' : ms === 1.5 ? 'smile' : ms === 2 ? 'grin' : ms === 3 ? 'frown' : ms === 4 ? 'o' : 'flat';
     // corner heights (left, right) and how far the lips sit apart
     const [cl, cr] = { flat: [0, 0], smirk: [0.0005, 0.0068], smile: [0.0045, 0.0045], grin: [0.0062, 0.0062], frown: [-0.0058, -0.0058], o: [0, 0] }[shape];
-    const gap = shape === 'grin' ? 0.0042 : 0;
+    const gap = shape === 'grin' ? 0.005 : 0;
     const zAt = x => faceZ(x, MY) - 0.0008 - MZ;
     const mk = (x, y, dz = 0) => [x, y, zAt(x) + dz];
     this.lipU = new THREE.Bone(); this.lipU.position.set(0, MY, MZ); H.add(this.lipU);
@@ -821,9 +835,9 @@ export class Character {
     this.add(this.mouthIn, g.mouthIn, dark, [0, gap ? -gap * 0.3 : 0, 0], null, [MW * 0.86, gap ? 0.0062 : 0.0045, 1]);
     if (shape === 'grin') {
       const teeth = variant('teeth', () => taperTube(
-        [mk(-MW * 0.72, 0.0025, -0.0026), mk(0, 0.0012, -0.0012), mk(MW * 0.72, 0.0025, -0.0026)],
-        [[0, 0.0016], [0.5, 0.0026], [1, 0.0016]], { seg: 16, radial: 6, flat: 0.45 }));
-      this.add(this.lipU, teeth, C('plain', 0xe6ddc8), [0, -0.0005, 0]);
+        [mk(-MW * 0.74, 0.0016, -0.0024), mk(0, -0.0006, -0.0009), mk(MW * 0.74, 0.0016, -0.0024)],
+        [[0, 0.0018], [0.5, 0.0031], [1, 0.0018]], { seg: 16, radial: 6, flat: 0.5 }));
+      this.add(this.lipU, teeth, C('plain', 0xeee6d2), [0, -0.0004, 0]);
     }
     if (ms === 5) {
       // the cigar hangs off the head, so it doesn't bob when the lips move

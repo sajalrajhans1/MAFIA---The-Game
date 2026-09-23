@@ -35,7 +35,13 @@ const RX = {
   think: /\b(i think|i bet|i suspect|my guess|pretty sure|im sure|i'm sure|probably|gotta be|has to be|must be)\b/,
   who: /\b(who|anyone|anybody|any ideas|thoughts|suspects?|whos|who's)\b/,
   why: /\bwhy\b/,
+  quiet: /\b(quiet|silent|say something|speak up|talk to us|not talking|havent said|haven't said)\b/,
+  skipBad: /\b(skip(ping)? (is|would be|was) (bad|dumb|stupid|a mistake|pointless)|(don'?t|dont|do not|no|not|never) skip)\b/,
 };
+
+// verbal tics only go on lines where they fit the mood
+const TIC_KEYS = new Set(['accuse', 'accuseStrong', 'agree', 'disagree', 'defendSelf', 'defendSelfMafia', 'counterAccuse', 'question', 'answerWho',
+  'answerNone', 'banter', 'firstDay', 'greet', 'voteFor', 'readyVote', 'pressure', 'defendOther', 'humanQuiet', 'mafiaSuggest', 'mafiaChat']);
 
 function wordRx(w) { return new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`); }
 
@@ -295,10 +301,12 @@ export class BotDirector {
     const h = this.human();
     const fill = { x: vars.x || '', y: vars.y || 'somebody', h: h ? h.name : 'friend', me: m ? m.p.name : '', card: vars.card || (m ? this.claimCard(m) : ''), n: vars.n || '', list: vars.list || '' };
     text = text.replace(/\{(\w+)\}/g, (_, k) => fill[k] ?? '');
-    if (m && TICS[persona] && chance(0.22) && text.length < 150) {
+    if (m && TICS[persona] && TIC_KEYS.has(key) && chance(0.22) && text.length < 150) {
       const t = TICS[persona];
-      if (chance(0.5) && !/^[A-Z][a-z]+[,!.]/.test(text.slice(0, 8))) text = pick(t.pre) + text;
-      else if (/[.!]$/.test(text)) text = text + pick(t.post);
+      const first = w => w.toLowerCase().replace(/[^a-z]/g, ' ').trim().split(' ')[0];
+      const pre = pick(t.pre);
+      if (chance(0.5) && !/^[A-Z][a-z]+[,!.]/.test(text.slice(0, 8)) && first(pre) !== first(text)) text = pre + text;
+      else if (/[.!]$/.test(text) && !/[?]/.test(text.slice(-3))) text = text + pick(t.post);
     }
     return text.replace(/\s+/g, ' ').trim().slice(0, 230);
   }
@@ -531,7 +539,12 @@ export class BotDirector {
       },
       effect: () => {
         this.recordClaim(b.pid, 'sheriff', m.results);
-        for (const [pid, isM] of m.results) if (isM) this.mem.accusations.push({ from: b.pid, to: pid, day: this.mem.day, strength: 2 });
+        for (const [pid, isM] of m.results) {
+          if (!isM) continue;
+          this.mem.accusations.push({ from: b.pid, to: pid, day: this.mem.day, strength: 2 });
+          const q = this.byId(pid);
+          if (q && q.bot && q.alive) this.accused(this.mind(q), b.pid, true);
+        }
         this.reactToKingClaim(b.pid);
       },
     });
@@ -575,8 +588,8 @@ export class BotDirector {
         }
       }
     }
-    // one or two ordinary reactions
-    const reactors = others.slice(0, kings.length > 1 ? 2 : 1);
+    // one or two ordinary reactions (not from anyone the King just named)
+    const reactors = others.filter(b => !(c.results.get(b.pid))).slice(0, kings.length > 1 ? 2 : 1);
     reactors.forEach((b, i) => {
       const m = this.mind(b);
       const key = kings.length > 1 ? 'claimDoubt' : (m.c.trust > 0.35 || chance(0.5)) ? 'claimBelieve' : 'claimDoubt';
@@ -759,8 +772,18 @@ export class BotDirector {
         if (about.length) {
           // "vinnie, what about rosa?"
           const x = about[0];
-          const v = this.sus(m, x.pid);
-          this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: v > 0.35 ? 'answerDistrust' : v < -0.2 ? 'answerTrust' : 'answerNone', vars: { x: x.name } });
+          if (!x.alive) {
+            const r = this.publicRole(x.pid);
+            this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: r === 'mafia' ? 'answerDeadJoker' : r ? 'answerDeadCard' : 'answerDead', vars: { x: x.name, card: cardLabel(x.card) } });
+          } else {
+            const v = this.sus(m, x.pid);
+            this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: v > 0.35 ? 'answerDistrust' : v < -0.2 ? 'answerTrust' : 'answerNone', vars: { x: x.name } });
+          }
+        } else if (RX.quiet.test(text)) {
+          // called out for being quiet: say so, then give a name
+          this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: 'replyQuietMe' });
+          const t = this.topSuspect(m);
+          if (t && t.v > 0.1) this.intend(m, { at: rand(3.5, 5), urg: 6, key: 'answerWho', vars: { x: t.p.name, reason: this.reasonFor(m, t.p.pid) }, effect: () => this.recordAccusation(m, t.p.pid, 0.8) });
         } else if (RX.why.test(text)) {
           const last = mem.lastAccusedBy.get(first.pid);
           if (last) this.intend(m, { at: rand(1.2, 2.5), urg: 7, key: 'replyWhyMe', vars: { reason: this.reasonFor(m, last), x: this.name(last) } });
@@ -775,14 +798,27 @@ export class BotDirector {
         else this.intend(m, { at: rand(1, 2.2), urg: 5, key: text.trim().split(' ').length > 3 && chance(0.4) ? 'replyConfused' : 'replyAskMe' });
         return;
       }
-      for (const x of about.slice(0, 2)) {
+      if (RX.thanks.test(text) || (RX.greet.test(text) && text.trim().split(' ').length <= 4)) {
+        const x = about.find(p => p.bot && p.alive);
+        if (x) this.intend(this.mind(x), { at: rand(1, 2.2), urg: 5, key: RX.thanks.test(text) ? 'replyThanks' : 'replyGreet' });
+        return;
+      }
+      const deadNamed = about.find(p => !p.alive);
+      if (deadNamed && !about.some(p => p.alive) && (RX.mafiaWord.test(text) || RX.voteWord.test(text))) {
+        const r = replyFrom(aliveBots, 1)[0];
+        const role = this.publicRole(deadNamed.pid);
+        if (r) this.intend(this.mind(r), { at: rand(1.5, 3), urg: 5, key: role === 'mafia' ? 'answerDeadJoker' : role ? 'answerDeadCard' : 'answerDead', vars: { x: deadNamed.name, card: cardLabel(deadNamed.card) } });
+        return;
+      }
+      for (const x of about.filter(p => p.alive).slice(0, 2)) {
         const defend = RX.townWord.test(text) && !RX.voteWord.test(text) && !/\b(sus|joker|mafia)\b/.test(text.replace(/not (a |the )?(mafia|joker)/g, ''));
         if (defend) {
           mem.defenses.push({ from: h.pid, to: x.pid, day: mem.day });
           if (x.bot && x.alive && chance(0.55)) this.intend(this.mind(x), { at: rand(1.2, 2.5), urg: 5, key: 'thanksDefend', vars: { x: h.name } });
           continue;
         }
-        const accuse = RX.mafiaWord.test(text) || RX.voteWord.test(text) || RX.think.test(text) || isQ || text.trim().length < 24;
+        const bare = text.trim().replace(/[?!.]/g, '').trim().split(' ').length <= 2; // "rosa?" / "it's rosa"
+        const accuse = RX.mafiaWord.test(text) || RX.voteWord.test(text) || RX.think.test(text) || (isQ && !RX.why.test(text)) || bare;
         if (!accuse) continue;
         mem.accusations.push({ from: h.pid, to: x.pid, day: mem.day, strength: RX.voteWord.test(text) ? 1.3 : 1 });
         if (x.bot && x.alive) this.accused(this.mind(x), h.pid, false);
@@ -801,7 +837,7 @@ export class BotDirector {
     // ---- general chatter
     if (RX.skip.test(text) && s.phase !== 'lobby') {
       const r = replyFrom(aliveBots, 1)[0];
-      if (r && chance(0.6)) this.intend(this.mind(r), { at: rand(1.5, 3), urg: 3, key: 'replySkip' });
+      if (r && chance(0.7)) this.intend(this.mind(r), { at: rand(1.5, 3), urg: 3, key: RX.skipBad.test(text) ? 'replyAgree' : 'replySkip' });
     } else if (RX.who.test(text) && isQ) {
       replyFrom(aliveBots, chance(0.5) ? 2 : 1).forEach((b, i) => {
         const m = this.mind(b);

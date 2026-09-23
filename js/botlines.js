@@ -3,6 +3,7 @@
 // {card} the speaker's card, {n} a night number, {list} a list of findings.
 
 import { MORE_LINES, MORE_PERSONA } from './botlines-more.js';
+import { EXTRA_LINES, EXTRA_PERSONA } from './botlines-extra.js';
 
 // Same faces every game. Tables smaller than 12 seat the first N (in this order).
 export const CAST = [
@@ -333,9 +334,13 @@ export const PERSONA_LINES = {
   },
 };
 
-// fold in the second book of lines
-for (const [k, v] of Object.entries(MORE_LINES)) LINES[k] = (LINES[k] || []).concat(v);
-for (const [who, keys] of Object.entries(MORE_PERSONA)) {
-  PERSONA_LINES[who] = PERSONA_LINES[who] || {};
-  for (const [k, v] of Object.entries(keys)) PERSONA_LINES[who][k] = (PERSONA_LINES[who][k] || []).concat(v);
+// fold in the second and third books of lines
+for (const book of [MORE_LINES, EXTRA_LINES]) {
+  for (const [k, v] of Object.entries(book)) LINES[k] = (LINES[k] || []).concat(v);
+}
+for (const book of [MORE_PERSONA, EXTRA_PERSONA]) {
+  for (const [who, keys] of Object.entries(book)) {
+    PERSONA_LINES[who] = PERSONA_LINES[who] || {};
+    for (const [k, v] of Object.entries(keys)) PERSONA_LINES[who][k] = (PERSONA_LINES[who][k] || []).concat(v);
+  }
 }

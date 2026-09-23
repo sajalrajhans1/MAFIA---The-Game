@@ -543,6 +543,12 @@ export class GameServer {
     this.setPhase('day', this.settings.dayTime);
     this.sys(`Day ${this.day}. Talk it out. Who is lying?`, { kind: 'phase' });
     this.fx('day');
+    // the first day at a solo table: a quiet hint that the regulars listen
+    const h = this.solo && !this.tipped && this.players.find(p => !p.bot && p.alive);
+    if (h) {
+      this.tipped = true;
+      this.sys('Tip: the regulars listen. Name someone to accuse them, ask "who do you suspect?", ask "Rosa, what about Sal?", or claim your card.', { to: h.pid, kind: 'dim' });
+    }
   }
 
   startVote() {

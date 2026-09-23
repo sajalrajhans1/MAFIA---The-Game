@@ -8,6 +8,7 @@ import { sanitizeLook, randomLook, LOOK_COUNT } from './looks.js';
 import { makeHostTransport, makeClientTransport, makeRoomCode, cleanCode } from './net.js';
 import { loadCardArt, ROLES } from './cards.js';
 import { LookPreview } from './preview.js';
+import { cleanMessage } from './guard.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -297,8 +298,10 @@ window.addEventListener('beforeunload', e => {
 });
 
 // ------------------------------------------------------------------ messages
-function onMessage(msg) {
-  if (!msg || typeof msg !== 'object') return;
+function onMessage(raw) {
+  // everything from the host is rebuilt with strict types first (see guard.js)
+  const msg = cleanMessage(raw);
+  if (!msg) return;
   lastMsgAt = Date.now();
   switch (msg.t) {
     case 'ping': send({ t: 'pong' }); break;

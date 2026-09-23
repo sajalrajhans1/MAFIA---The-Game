@@ -2,6 +2,7 @@
 // Scenario tests for every rule, then a fuzzer that throws random/malicious traffic at it.
 // Run: node tests/server.test.js
 import { GameServer, DEFAULT_SETTINGS } from '../js/server.js';
+import { cleanMessage } from '../js/guard.js';
 
 // ---------------------------------------------------------------- harness
 let clock = 1_000_000;
@@ -497,6 +498,39 @@ section('single player: full games against the cast');
   ok(finished === games, `every bot game reached a winner (${finished}/${games}, town won ${townWins})`);
   ok(botChats > games * 5, `the bots talk (${botChats} lines over ${games} games)`);
   ok(bad.length === 0, 'no broken bot lines' + (bad.length ? ': ' + bad.slice(0, 5).join(' | ') : ''));
+}
+
+// ---------------------------------------------------------------- hostile host
+section('guard: a modified host cannot inject markup or junk into clients');
+{
+  const evil = '<img src=x onerror=alert(1)>';
+  const st = cleanMessage({ t: 'state', s: {
+    code: evil, mode: 'x', phase: 'pwn', day: 'NaN', settings: { mafia: evil, dayTime: 1e99, sheriff: 'yes' },
+    players: [
+      { pid: 'good1', name: evil.repeat(20), seat: evil, role: 'god', card: { rank: evil, suit: evil }, vote: evil, look: { suit: 999 } },
+      { pid: '"><script>', name: 'x' },
+      { pid: 'good2', name: 'Ok', card: { rank: '7', suit: evil }, role: 'civilian', vote: 'skip' },
+    ],
+    me: { pid: 'good1', role: 'mafia', targets: ['good2', evil, 5], results: [{ pid: evil, name: evil }], actionKind: evil, channel: evil },
+    announce: { kind: evil, title: 5, text: evil },
+  } });
+  const v = st && st.s;
+  ok(!!v, 'a hostile state is cleaned, not dropped wholesale');
+  ok(v.code === 'IMGSR' || !/[<>]/.test(v.code), 'room code reduced to letters');
+  ok(v.phase === 'lobby' && v.day === 0, 'unknown phase and bad numbers fall back');
+  ok(v.settings.mafia === 1 && v.settings.dayTime === 3600 && v.settings.sheriff === false, 'settings coerced to safe numbers and booleans');
+  ok(v.players.length === 2 && v.players.every(p => /^[a-z0-9]+$/i.test(p.pid)), 'players with bad ids are dropped');
+  const p0 = v.players[0];
+  ok(p0.name.length <= 16 && p0.seat === 0 && p0.role === undefined && p0.card === undefined && p0.vote === null, 'names clipped, bad seat/role/card/vote removed');
+  ok(p0.look.suit >= 0 && p0.look.suit < 10, 'looks sanitized');
+  ok(v.players[1].card.suit === 'S' && v.players[1].vote === 'skip', 'valid fields survive');
+  ok(v.me.targets.length === 1 && v.me.results.length === 0 && v.me.actionKind === null && v.me.channel === null, 'me.* cleaned');
+  ok(v.announce.kind === 'quiet' && v.announce.title === '', 'announcement cleaned');
+  const ch = cleanMessage({ t: 'chat', m: { ch: 'town', pid: evil, name: evil, text: 'x'.repeat(5000), kind: evil } });
+  ok(ch.m.pid === null && ch.m.text.length === 400 && ch.m.kind === undefined, 'chat cleaned');
+  ok(cleanMessage({ t: 'chat', m: { ch: evil } }) === null && cleanMessage({ t: 'eval' }) === null && cleanMessage(null) === null, 'unknown messages dropped');
+  ok(cleanMessage({ t: 'fx', kind: 'emote', e: evil, pid: 'good1' }).e === null, 'fx cleaned');
+  ok(cleanMessage({ t: 'welcome', pid: evil }) === null, 'welcome needs a valid id');
 }
 
 // ---------------------------------------------------------------- fuzzer

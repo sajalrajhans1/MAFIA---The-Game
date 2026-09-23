@@ -8,14 +8,14 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="MAFIA · A game of cards &amp; lies">
 <meta property="og:description" content="Sit at a smoky card table with your friends, draw your role, and find the Jokers before they find you. Free, in your browser.">
-<meta property="og:image" content="https://raw.githubusercontent.com/sajalrajhans1/MAFIA---The-Game/main/assets/img/title.jpg">
+<meta property="og:image" content="assets/img/title.jpg">
 <meta property="og:image:width" content="1920">
 <meta property="og:image:height" content="1080">
 <meta property="og:image:alt" content="Three men in fedoras at a smoky card table">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MAFIA · A game of cards &amp; lies">
 <meta name="twitter:description" content="A first-person noir Mafia card game for you and your friends. Free, in your browser.">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/sajalrajhans1/MAFIA---The-Game/main/assets/img/title.jpg">
+<meta name="twitter:image" content="assets/img/title.jpg">
 <meta name="twitter:image:alt" content="Three men in fedoras at a smoky card table">
 <meta name="theme-color" content="#0a0506">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0506'/%3E%3Ctext x='16' y='25' font-size='24' text-anchor='middle' fill='%23e0323c'%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
@@ -23,11 +23,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+},
+"integrity": {
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js": "sha384-qOubuRxWZ0I7rXTjcuhcKNHKvPM7q0ztN8/82sJnxnyKS0OXTeB5FsIcysc2T9EY",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/EffectComposer.js": "sha384-L+Ns9skCAqjab7aG8LH5VLknBCoENW7p37sOj39jnITwlWZFabWc29JwzgYf6ygy",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/RenderPass.js": "sha384-JBzMcXwTgF2e9tw3AU4+jg+nVDdl7hTHlT0C5qZVa/1DUUe/KIm4L3e2jorIH28/",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/UnrealBloomPass.js": "sha384-NLbvCtTvm5zjFCKW1mFWUjcnFLVOn258z3hKOAoYCXJ1DtQO54I+x5LPquFbIig+",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/ShaderPass.js": "sha384-zetU6HhR/vTtgSvnS9DE+GQPZhVT/ZOSLa/1+DSM6rkM9hvBgQWr9bCEosZt93ch",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/OutputPass.js": "sha384-pAQ55aG4oXjA92n2goVLMWU14Ik/bNUs29MfxOM6meGyGzTJoFm7WxEU0D0SqsNI",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js": "sha384-wOjwauvHlJO7K6APr7FmMGH2nupQa3Ndzas9bJZhsAMOK055efJud8ns4aYmASKv",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/shaders/CopyShader.js": "sha384-kzVlcj2amFaRNIWZ5zE0PmIN+QTNWWvrgKk31S8N/7w0nf7Qq3xqxHRLbD2UPPSl",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/MaskPass.js": "sha384-SDM80tiGflO8UDV/QzR/mASjcc/+wF7KfRVFNHJUIPcTctwoPI8GoWVTlccZw7V4",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/postprocessing/Pass.js": "sha384-gSqIFh8vMmp1veyOysIS3KPVUl/A5JPefYvW4b89OeYeW0bwkrjN7qcC1h0XJK/K",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/shaders/LuminosityHighPassShader.js": "sha384-a6qrIDfNt1Ss7Z4VtgMalz9gq8H/Up3lSSf1Agc4HRaDMvNd9eP9k7DckAv5JxQF",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/shaders/OutputShader.js": "sha384-CdpJL3xlIkjJQAbzgyazSoOx+/oBcwUCsBVSU25SKy8/PEdYEn24U+4mnmx3R4YX",
+  "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/environments/RoomEnvironment.js": "sha384-9ItPPH2vgKbkvgrqTKq7ptGYe+WuAnqlZtlqleJW4/CJjnM5R7C+efD6iS7ADPJ9"
 } }
 </script>
 </head>
@@ -236,11 +250,6 @@
 </div>
 <div id="crt"></div>
 <noscript>This game needs JavaScript.</noscript>
-<script>
-  if (location.protocol === 'file:') {
-    document.getElementById('app').innerHTML = '<div class="overlay"><div class="panel modal-box"><h2>ONE MORE STEP</h2><p>Browsers block games opened straight from a file.</p><p>Run <kbd>python serve.py</kbd> in the game folder (or double-click <b>start.bat</b> on Windows), then open <b>http://localhost:8080</b>.</p></div></div>';
-  }
-</script>
-<script type="module" src="js/main.js"></script>
+<script src="js/boot.js"></script>
 </body>
 </html>

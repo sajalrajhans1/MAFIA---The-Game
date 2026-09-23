@@ -42,7 +42,7 @@ export class PeerHost extends Emitter {
       let settled = false;
       const peer = new window.Peer(PREFIX + code, PEER_OPTS);
       this.peer = peer;
-      const t = setTimeout(() => { if (!settled) { settled = true; reject(new Error('Could not reach the matchmaking server. Try again, or use same-device mode.')); } }, 15000);
+      const t = setTimeout(() => { if (!settled) { settled = true; reject(new Error('Could not reach the matchmaking server. Check your connection and try again.')); } }, 15000);
       peer.on('open', () => { if (!settled) { settled = true; clearTimeout(t); resolve(); } });
       peer.on('error', err => {
         if (!settled) {

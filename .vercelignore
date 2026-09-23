@@ -1,0 +1,10 @@
+# Only the game is published. Development files stay in the repository.
+tests/
+serve.py
+start.bat
+package.json
+README.md
+.gitattributes
+.gitignore
+.nojekyll
+.claude/

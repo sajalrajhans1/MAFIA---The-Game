@@ -86,14 +86,41 @@ It's a static site with no build step and no backend.
 
 Opening `index.html` straight from disk won't work, because browsers block ES modules on `file://`.
 
-## Deploy
+## Deploy (Vercel)
 
-Upload the folder to any static host: GitHub Pages, Netlify, Vercel, Cloudflare Pages, or itch.io
-as an HTML game. On GitHub Pages: *Settings → Pages → Deploy from a branch → `main` / root*.
+Import the repository in Vercel with **Root Directory** `./`, **Framework Preset** *Other*, and no build
+command. Every push to `main` redeploys.
 
-Link previews (Twitter/X, Discord, iMessage) use `assets/img/title.jpg` straight from this GitHub
-repository, so they work on any host. If you make the repository private, point the `og:image` and
-`twitter:image` tags in `index.html` at the image on your own domain instead.
+- `vercel.json` sets the security headers (see below).
+- `.vercelignore` keeps development files (`tests/`, `serve.py`, `start.bat`, `package.json`, this README)
+  off the live site.
+- Link previews use `assets/img/title.jpg`. Twitter/X needs an absolute URL: set the `og:image` and
+  `twitter:image` tags in `index.html` to `https://<your-domain>/assets/img/title.jpg`.
+
+## PC only
+
+The game is built for a keyboard, a mouse and a big screen. Phones and tablets (including iPads, which
+report themselves as Macs) get a short "this game is only for PC" screen and never download the 3D engine.
+Any desktop window size works: the interface compacts for short or narrow windows and scales up on
+large monitors.
+
+## Security
+
+- **Hidden roles never leave the host.** The host's browser runs the game and sends each player a
+  personalised view, so reading the code or the network traffic shows you nothing about other cards.
+- **Everything from the network is untrusted.** `js/guard.js` rebuilds every incoming message with strict
+  types (ids, enums, clipped strings, clamped numbers), so a modified client can't inject markup or junk,
+  and the host validates everything players send it.
+- **Strict Content-Security-Policy** (in `vercel.json`): scripts only from this site and the pinned CDN,
+  no inline scripts except the import map (allowed by hash), no framing (`frame-ancestors 'none'`),
+  network access only to the PeerJS server, plus `nosniff`, a referrer policy, HSTS and a locked-down
+  permissions policy.
+- **Pinned, integrity-checked libraries.** PeerJS and every three.js module are pinned to exact versions
+  and carry SRI hashes, so a tampered CDN file is refused.
+
+If you edit the `<script type="importmap">` block in `index.html`, its hash in `vercel.json`
+(`script-src ... 'sha256-...'`) must be updated, or the browser will refuse to start the game. The browser
+console prints the expected hash when that happens.
 
 ## Graphics & performance
 

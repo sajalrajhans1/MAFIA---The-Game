@@ -49,7 +49,25 @@ export class UI {
     this.lastTickSec = -1;
     this.announceTimer = null;
     this.revealState = null;
+    this.uiScale = 1;
     this.bindStatic();
+    this.applyScale();
+    window.addEventListener('resize', () => this.applyScale());
+  }
+
+  // Big screens: scale the whole interface up (the layout is designed around ~1700x950 and
+  // smaller windows are handled by CSS media queries). Name tags scale with it.
+  applyScale() {
+    let z = 1;
+    if (window.CSS && CSS.supports && CSS.supports('zoom', '1.5')) {
+      z = Math.min(1.8, Math.max(1, Math.min(window.innerWidth / 1700, window.innerHeight / 950)));
+      z = Math.round(z * 20) / 20;
+    }
+    if (z === this.uiScale) return;
+    this.uiScale = z;
+    document.documentElement.style.setProperty('--z', String(z));
+    for (const id of ['app', 'tags']) $(id).style.zoom = z === 1 ? '' : String(z);
+    this._bounds = null;
   }
 
   // ------------------------------------------------------------ plumbing
@@ -523,6 +541,7 @@ export class UI {
   positionTags(proj) {
     const now = performance.now();
     const W = window.innerWidth, H = window.innerHeight;
+    const z = this.uiScale || 1; // tags live in the scaled layer: window pixels divide by the scale
     // in first person, pin off-screen players to the edges of the open 3D area
     const fp = this.current === 'hud';
     let lb = 0, rb = W;
@@ -534,7 +553,9 @@ export class UI {
         this._bounds = {
           t: now,
           l: cl && W > 820 && !hidden ? cl.getBoundingClientRect().right : 0,
-          r: ch && W > 820 && !ch.classList.contains('min') && !hidden ? ch.getBoundingClientRect().left : W,
+          // wide: stop at the chat panel; narrow: stop at the column of icon buttons on the right
+          r: ch && W > 820 && !ch.classList.contains('min') && !hidden ? ch.getBoundingClientRect().left
+            : W <= 820 && !$('topbar').classList.contains('hidden') ? $('topbar').getBoundingClientRect().left - 4 : W,
         };
       }
       lb = this._bounds.l; rb = this._bounds.r;
@@ -555,14 +576,14 @@ export class UI {
       t.el.classList.toggle('edge-r', edge === 'r');
       if (edge) { edges[edge].push({ t, p }); continue; }
       const s = Math.max(0.72, Math.min(1.08, 3.2 / p.d));
-      t.el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%) scale(${s.toFixed(3)})`;
+      t.el.style.transform = `translate(${(p.x / z).toFixed(1)}px, ${(p.y / z).toFixed(1)}px) translate(-50%, -100%) scale(${s.toFixed(3)})`;
       t.el.style.zIndex = String(1000 - Math.round(p.d * 100));
     }
     for (const side of ['l', 'r']) {
       const list = edges[side].sort((a, b) => Math.abs(a.p.ang) - Math.abs(b.p.ang));
       list.forEach(({ t }, i) => {
-        const y = H * 0.3 + i * 34;
-        const x = side === 'l' ? lb + 10 : rb - 10;
+        const y = (H * 0.3) / z + i * 34;
+        const x = (side === 'l' ? lb + 10 : rb - 10) / z;
         t.el.style.transform = `translate(${x}px, ${y}px) translate(${side === 'l' ? '0' : '-100%'}, -50%)`;
         t.el.style.zIndex = String(2000 - i);
       });

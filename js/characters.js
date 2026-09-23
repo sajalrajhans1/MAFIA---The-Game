@@ -424,7 +424,6 @@ function geos() {
     hairBuzz: hairCap(0.1026, HAIRLINE, { edge: 0.12 }),
     hairUnderHat: hairCap(0.1046, HAIRLINE, { high: UNDER_HAT, from: 0.95, edge: 0.3 }),
     hairFringe: hairCap(0.1046, HAIRLINE, { high: FRINGE_TOP, from: 1.25, edge: 0.3 }),
-    hairSwoop: new THREE.SphereGeometry(0.05, 18, 10),
     // bob: a crown with bangs plus a curtain over the sides and back, open at the face
     bobTop: shell(0.108, 0, 0.4 * Math.PI, -0.18),
     bobSides: shell(0.11, 0.28 * Math.PI, 0.38 * Math.PI, 0.1, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9),
@@ -750,7 +749,7 @@ export class Character {
     this.eyes = [];
     this.lids = [];
     this.lidOpen = Math.acos(up) - LT;
-    this.lidShut = Math.acos(-0.25) - LT;
+    this.lidShut = Math.acos(-0.55) - LT; // closed: the upper lid tucks over the lower one
     this.eyeBias = es === 5 ? 0.3 : 0;
     for (const s of [-1, 1]) {
       const ex = s * EX, ez = faceZ(ex, EY) - r * 0.42;
@@ -809,7 +808,30 @@ export class Character {
     if (hatOn) { this.add(H, g.hairUnderHat, hairM, null, null, HEAD_SCALE); return; }
     if (style === 2) { this.add(H, g.hairBuzz, hairM, null, null, HEAD_SCALE); return; }
     this.add(H, style === 1 ? g.hairSide : g.hairSlick, hairM, null, null, HEAD_SCALE);
-    if (style === 1) this.add(H, g.hairSwoop, hairM, [-0.03, 0.098, 0.03], [0.1, 0, 0.35], [1.1, 0.34, 1.25]);
+    if (style === 1) {
+      // side part: a parting on the left and a soft wave combed across the front, both laid on the hair
+      const onHair = (dir, extra) => {
+        const v = dir.clone().normalize().multiplyScalar(0.1);
+        const uy = v.y / 0.1;
+        sculptPoint(v);
+        v.multiplyScalar((1.068 * (1 + 0.04 * Math.max(0, uy)) + extra));
+        return [v.x * HEAD_SCALE[0], v.y * HEAD_SCALE[1], v.z * HEAD_SCALE[2]];
+      };
+      const at = (x, y) => new THREE.Vector3(x / HEAD_SCALE[0], y / HEAD_SCALE[1], Math.sqrt(Math.max(0, 0.01 - (x / HEAD_SCALE[0]) ** 2 - (y / HEAD_SCALE[1]) ** 2)));
+      const wave = variant('sideWave', () => taperTube(
+        [onHair(at(-0.034, 0.083), 0), onHair(at(-0.01, 0.087), 0.03), onHair(at(0.018, 0.082), 0.028), onHair(at(0.045, 0.068), 0.018), onHair(at(0.06, 0.048), 0)],
+        [[0, 0.003], [0.25, 0.008], [0.6, 0.007], [1, 0.002]], { seg: 20, radial: 8, flat: 0.5 }));
+      this.add(H, wave, hairM);
+      const part = variant('sidePart', () => {
+        const pts = [];
+        for (let i = 0; i <= 7; i++) {
+          const a = 0.62 - i / 7 * 1.5; // from over the forehead back over the crown
+          pts.push(onHair(new THREE.Vector3(-0.38, Math.cos(a), Math.sin(a)), 0.0035));
+        }
+        return taperTube(pts, [[0, 0.0005], [0.15, 0.0011], [0.85, 0.001], [1, 0.0003]], { seg: 24, radial: 5 });
+      });
+      this.add(H, part, this.C('plain', this.skinColor.clone().multiplyScalar(0.8)));
+    }
     if (style === 3) {
       // a pompadour: a roll rising off the hairline and swept back over the crown
       const roll = variant('pomp', () => taperTube(
@@ -1241,6 +1263,9 @@ export class Character {
     }
     if (dk) shut = Math.max(shut, dk);
     if (this.ghost) shut = Math.max(shut, 0.35);
+    // asleep at night: eyes gently closed (the lids ease shut rather than snapping)
+    this.sleepLid = (this.sleepLid || 0) + ((this.sleeping ? 1 : 0) - (this.sleepLid || 0)) * Math.min(1, dt * 2.5);
+    shut = Math.max(shut, this.sleepLid * 0.97);
     // lids follow the gaze a little (looking down drops the lids)
     const follow = Math.max(0, G.pitch) * 0.5;
     const a = this.lidOpen + (this.lidShut - this.lidOpen) * shut + follow;

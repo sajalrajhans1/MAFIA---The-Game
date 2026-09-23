@@ -536,6 +536,13 @@ kbd { font-family: var(--pix); font-size: 9px; border: 1px solid var(--brass-dim
 .wd-dots button.on { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 8px rgba(255,179,71,0.6); }
 .wd-btns { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; margin-top: 12px; }
 @media (max-width: 820px) {
+  /* the lobby becomes one scrolling column above the chat, with the deal button pinned */
+  #app > #lobby.screen { bottom: 262px; overflow-y: auto; overflow-x: hidden; pointer-events: auto; padding: 8px; }
+  #lobby .col-left, #lobby .col-right { position: static; width: auto; max-height: none; overflow: visible; margin: 0 0 10px; pointer-events: auto; }
+  #lobby .list-panel { max-height: none; overflow: visible; }
+  #lobby .roster { overflow: visible; }
+  #lobby .lobby-bottom { position: fixed; bottom: 206px; }
+  body.in-lobby .chat { height: 190px; }
   .wd-box { grid-template-columns: 1fr; grid-template-rows: 42vh 1fr; height: 94vh; padding: 10px; gap: 10px; }
   .friends { grid-template-columns: 1fr; }
   .who { gap: 10px; }

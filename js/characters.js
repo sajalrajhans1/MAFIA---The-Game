@@ -343,7 +343,7 @@ function geos() {
     shirtCollar: new THREE.TorusGeometry(0.056, 0.011, 6, 18, Math.PI * 1.55),
     button: new THREE.SphereGeometry(0.0085, 8, 6),
     neck: new THREE.CylinderGeometry(0.053, 0.06, 0.1, 16),
-    head: headTint(sculpt(new THREE.SphereGeometry(0.1, 64, 48), 0.1)),
+    head: headTint(sculpt(new THREE.SphereGeometry(0.1, 56, 42), 0.1)),
     ear: new THREE.SphereGeometry(0.024, 12, 10),
     nose: noseGeo(),
     eyeball: eyeballGeo(ER),
@@ -956,7 +956,9 @@ export class Character {
       if (geos.length > 1) geos.forEach(x => x.dispose());
       const mesh = new THREE.SkinnedMesh(geo, mat);
       mesh.frustumCulled = false;
-      mesh.castShadow = !mat.transparent && !mat.isMeshBasicMaterial;
+      // tiny glossy parts (eyes) and glass don't need to be in the shadow maps
+      mesh.userData.cast = !mat.transparent && !mat.isMeshBasicMaterial && mat !== this.eyeMat;
+      mesh.castShadow = mesh.userData.cast;
       mesh.receiveShadow = true;
       mesh.userData.mat = mat;
       this.root.add(mesh);
@@ -992,7 +994,7 @@ export class Character {
     if (this.emberMesh) this.emberMesh.visible = !on;
     for (const m of this.meshes) {
       m.material = on ? this.ghostMat : m.userData.mat;
-      m.castShadow = !on && !m.userData.mat.transparent;
+      m.castShadow = !on && m.userData.cast;
     }
     this.point = null;
   }

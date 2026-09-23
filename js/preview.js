@@ -139,7 +139,7 @@ export class LookPreview {
     this.char.root.position.set(0, 0, 0);
     this.char.placeRest(0.5);
     this.char.nextIdle = 1e9; // no idle gestures, just breathing and looking at you
-    this.char.root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    this.char.root.traverse(o => { if (o.isMesh) { o.castShadow = o.userData.cast !== false; o.receiveShadow = true; } });
     this.scene.add(this.char.root);
     if (old) {
       // carry the pose over so a change of clothes doesn't restart the animation

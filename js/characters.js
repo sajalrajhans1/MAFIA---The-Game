@@ -325,6 +325,63 @@ function curlsGeo() {
   return mergeGeometries(parts, false);
 }
 
+// the torso is a lathe (radius profile below) squashed front-to-back; this is its front surface
+const TORSO = [[0.001, 0], [0.15, 0], [0.165, 0.1], [0.182, 0.25], [0.205, 0.42], [0.216, 0.5], [0.208, 0.56], [0.16, 0.606], [0.075, 0.632], [0.001, 0.638]];
+const TORSO_Z = 0.68;
+function torsoR(y) {
+  for (let i = 1; i < TORSO.length; i++) {
+    if (y <= TORSO[i][1]) { const [r0, y0] = TORSO[i - 1], [r1, y1] = TORSO[i]; return r0 + (r1 - r0) * (y - y0) / (y1 - y0); }
+  }
+  return 0.001;
+}
+function torsoZ(x, y) { const r = torsoR(y); return TORSO_Z * Math.sqrt(Math.max(0, r * r - x * x)); }
+
+// a panel laid on the chest: rows from y0 to y1, each spanning xl(t)..xr(t), lifted off the cloth
+function drape(y0, y1, xl, xr, lift, rows = 14, cols = 6) {
+  const pos = [], uv = [], idx = [];
+  for (let i = 0; i <= rows; i++) {
+    const t = i / rows, y = y0 + (y1 - y0) * t;
+    const a = xl(t), b = xr(t);
+    for (let j = 0; j <= cols; j++) {
+      const u = j / cols, x = a + (b - a) * u;
+      pos.push(x, y, torsoZ(x, y) + lift);
+      uv.push(u, t);
+    }
+  }
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const a = i * (cols + 1) + j, b = a + cols + 1;
+      idx.push(a, a + 1, b, a + 1, b + 1, b);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+// the V of the jacket opening, and a notched lapel on each side of it
+const V_BOT = 0.33, V_TOP = 0.615, V_HALF = 0.068;
+const vEdge = y => Math.max(0.002, V_HALF * (y - V_BOT) / (V_TOP - V_BOT));
+function lapelGeo(side) {
+  const y0 = 0.3, y1 = 0.605;
+  const width = y => {
+    if (y < 0.53) return 0.012 + 0.04 * Math.pow((y - y0) / (0.53 - y0), 0.9); // widening up to the peak
+    if (y < 0.548) return 0.052;
+    if (y < 0.566) return 0.028; // the notch
+    return 0.034 - 0.01 * (y - 0.566) / (y1 - 0.566);
+  };
+  const inner = t => vEdge(y0 + (y1 - y0) * t) - 0.002;
+  const outer = t => { const y = y0 + (y1 - y0) * t; return vEdge(y) - 0.002 + width(y); };
+  const g = side > 0 ? drape(y0, y1, inner, outer, 0.0045, 30, 5) : drape(y0, y1, t => -outer(t), t => -inner(t), 0.0045, 30, 5);
+  return g;
+}
+function tieGeo() {
+  const half = t => t < 0.07 ? 0.0175 * (t / 0.07) : 0.0175 - 0.005 * (t - 0.07) / 0.93;
+  return drape(0.345, 0.588, t => -half(t), t => half(t), 0.006, 16, 3);
+}
+
 let G = null;
 function geos() {
   if (G) return G;
@@ -336,14 +393,14 @@ function geos() {
   G = {
     torso: new THREE.LatheGeometry(torsoPts, 28),
     shoulder: new THREE.SphereGeometry(0.078, 16, 12),
-    shirt: tri([[-0.075, 0.6], [0.075, 0.6], [0, 0.3]]),
-    openV: tri([[-0.034, 0.612], [0.034, 0.612], [0, 0.535]]),
-    tie: new THREE.BoxGeometry(0.034, 0.22, 0.008),
-    tieTip: tri([[-0.017, 0], [0.017, 0], [0, -0.022]]),
+    shirtV: drape(V_BOT, V_TOP, t => -V_HALF * t - 0.004, t => V_HALF * t + 0.004, 0.0025, 12, 6),
+    openV: drape(0.53, 0.62, t => -0.036 * t, t => 0.036 * t, 0.0045, 6, 4),
+    tie: tieGeo(),
+    lapelL: lapelGeo(-1),
+    lapelR: lapelGeo(1),
     knot: new THREE.BoxGeometry(0.036, 0.03, 0.02),
     bowWing: new THREE.ConeGeometry(0.02, 0.036, 4),
     bowKnot: new THREE.BoxGeometry(0.014, 0.018, 0.014),
-    lapel: new THREE.BoxGeometry(0.03, 0.26, 0.01),
     welt: new THREE.BoxGeometry(0.05, 0.006, 0.005),
     square: tri([[-0.022, 0], [-0.012, 0.02], [-0.002, 0.004], [0.008, 0.022], [0.02, 0]]),
     petal: new THREE.SphereGeometry(0.0105, 8, 6),
@@ -401,7 +458,7 @@ function geos() {
     brimS: new THREE.CylinderGeometry(0.142, 0.142, 0.01, 40),
     brimTop: new THREE.CylinderGeometry(0.152, 0.152, 0.009, 40),
     crown: new THREE.CylinderGeometry(0.084, 0.104, 0.115, 32),
-    crownT: new THREE.CylinderGeometry(0.08, 0.1, 0.13, 32),
+    crownT: new THREE.CylinderGeometry(0.072, 0.098, 0.108, 32),
     crownTop: new THREE.CylinderGeometry(0.09, 0.087, 0.2, 32),
     dent: new THREE.BoxGeometry(0.012, 0.012, 0.13),
     band: new THREE.CylinderGeometry(0.1055, 0.1055, 0.028, 32),
@@ -411,9 +468,9 @@ function geos() {
     capBill: new THREE.CylinderGeometry(0.085, 0.085, 0.008, 28, 1, false, -Math.PI / 2, Math.PI),
     capButton: new THREE.SphereGeometry(0.012, 10, 6),
     // arms, hands, legs
-    upper: cap(0.054, UA),
-    fore: cap(0.046, FA),
-    cuff: new THREE.CylinderGeometry(0.048, 0.048, 0.03, 12),
+    upper: cap(0.05, UA),
+    fore: cap(0.043, FA),
+    cuff: new THREE.CylinderGeometry(0.045, 0.045, 0.024, 14),
     palm: new THREE.SphereGeometry(0.045, 16, 10),
     thumb: new THREE.CapsuleGeometry(0.0115, 0.028, 3, 8),
     thigh: new THREE.CapsuleGeometry(0.072, 0.3, 4, 12),
@@ -509,7 +566,7 @@ export class Character {
     const skinHex = SKIN_COLORS[look.skin], hairHex = HAIR_COLORS[look.hairColor];
     this.skinColor = new THREE.Color(skinHex);
     const suit = C('cloth', suitCol);
-    const lapelM = C('cloth', new THREE.Color(suitHex).multiplyScalar(look.suit === 8 ? 0.82 : 0.6));
+    const lapelM = C('cloth', new THREE.Color(suitHex).multiplyScalar(look.suit === 8 ? 0.86 : 0.78));
     const pants = C('cloth', suitCol.clone().multiplyScalar(0.85));
     const shirtM = C('plain', 0xd9d2c0);
     const skin = C('plain', skinHex);
@@ -558,21 +615,22 @@ export class Character {
     this.spine.scale.set(this.wf, 1, 1);
     this.body.add(this.spine);
     add(this.spine, g.torso, suit, [0, 0, 0], null, [1, 1, 0.68]);
-    add(this.spine, g.shirt, shirtM, [0, 0, 0.149]);
+    add(this.spine, g.shirtV, shirtM);
     this.buildTie(look.tie, skin);
-    for (const s of [-1, 1]) add(this.spine, g.lapel, lapelM, [s * 0.056, 0.455, 0.155], [0, 0, s * 0.3]);
+    add(this.spine, g.lapelL, lapelM);
+    add(this.spine, g.lapelR, lapelM);
     for (const s of [-1, 1]) add(this.spine, g.shoulder, suit, [s * 0.158, 0.532, -0.006], [0, 0, s * -0.2], [0.92, 0.42, 0.88]);
     add(this.spine, g.collar, lapelM, [0, 0.598, -0.004], [Math.PI / 2 + 0.25, 0, 0.875 * Math.PI], [1, 1.05, 1]);
     add(this.spine, g.shirtCollar, shirtM, [0, 0.63, 0.006], [Math.PI / 2 + 0.18, 0, Math.PI / 2 + 0.225 * Math.PI], [1, 1.05, 1.5]);
-    for (const y of [0.29, 0.2]) add(this.spine, g.button, shoeM, [0.004, y, 0.13]);
-    add(this.spine, g.welt, lapelM, [0.108, 0.42, 0.141], [0, 0.35, 0]);
+    for (const y of [0.29, 0.2]) add(this.spine, g.button, shoeM, [0.004, y, torsoZ(0.004, y) + 0.002], null, [1, 1, 0.6]);
+    add(this.spine, g.welt, lapelM, [0.112, 0.43, torsoZ(0.112, 0.43) + 0.001], [0, 0.55, 0]);
     this.buildExtra(look.extra);
 
     // head
     this.head = new THREE.Bone();
-    this.head.position.set(0, 0.775, 0.012);
+    this.head.position.set(0, 0.757, 0.012);
     this.spine.add(this.head);
-    add(this.head, g.neck, skin, [0, -0.11, -0.007]); // on the head bone, so first person hides it too
+    add(this.head, g.neck, skin, [0, -0.1, -0.007]); // on the head bone, so first person hides it too
     add(this.head, g.head, skin, [0, 0, 0], null, HEAD_SCALE);
     for (const s of [-1, 1]) add(this.head, g.ear, skin, [s * 0.085, -0.006, -0.008], [0, s * 0.3, 0], [0.34, 0.95, 0.72]);
     add(this.head, g.nose, skin, [0, 0.006, faceZ(0, -0.01) - 0.0035], [-0.06, 0, 0]);
@@ -641,17 +699,17 @@ export class Character {
   buildTie(t, skin) {
     const g = geos(), C = this.C, S = this.spine;
     const col = TIE_COLORS[t];
+    const kz = torsoZ(0, 0.592);
     if (t <= 4) {
       const m = C('plain', col);
-      this.add(S, g.tie, m, [0, 0.47, 0.153]);
-      this.add(S, g.tieTip, m, [0, 0.36, 0.1575]);
-      this.add(S, g.knot, m, [0, 0.585, 0.135]);
+      this.add(S, g.tie, m);
+      this.add(S, g.knot, m, [0, 0.592, kz + 0.006], [-0.35, 0, 0], [0.8, 1, 0.8]);
     } else if (t <= 6) {
       const m = C('plain', col);
-      for (const s of [-1, 1]) this.add(S, g.bowWing, m, [s * 0.019, 0.585, 0.143], [0, 0, s * Math.PI / 2], [1, 1, 0.55]);
-      this.add(S, g.bowKnot, m, [0, 0.585, 0.149]);
+      for (const s of [-1, 1]) this.add(S, g.bowWing, m, [s * 0.019, 0.594, kz + 0.01], [0, 0, s * Math.PI / 2], [1, 1, 0.55]);
+      this.add(S, g.bowKnot, m, [0, 0.594, kz + 0.013]);
     } else {
-      this.add(S, g.openV, skin, [0, 0, 0.1505]);
+      this.add(S, g.openV, skin);
     }
   }
 
@@ -659,13 +717,13 @@ export class Character {
     const g = geos(), C = this.C, S = this.spine;
     if (e === 1 || e === 2) {
       const petal = C('plain', e === 1 ? 0xb3121c : 0xece6da);
-      const cx = 0.07, cy = 0.5, cz = 0.162;
+      const cx = 0.084, cy = 0.51, cz = torsoZ(0.084, 0.51) + 0.012;
       for (const [dx, dy] of [[0, 0], [0.008, 0.006], [-0.008, 0.005], [0.006, -0.007], [-0.006, -0.007]]) this.add(S, g.petal, petal, [cx + dx, cy + dy, cz]);
       this.add(S, g.leaf, C('plain', 0x2c5a24), [cx + 0.004, cy - 0.022, cz - 0.004], [0, 0, 2.7]);
     } else if (e === 3) {
-      this.add(S, g.square, C('plain', 0xe9e3d6), [0.108, 0.421, 0.1435], [0, 0.35, 0]);
+      this.add(S, g.square, C('plain', 0xe9e3d6), [0.112, 0.431, torsoZ(0.112, 0.43) + 0.002], [0, 0.55, 0]);
     } else if (e === 4) {
-      this.add(S, g.pin, C('plain', 0xd4a73a), [0.066, 0.49, 0.162]);
+      this.add(S, g.pin, C('plain', 0xd4a73a), [0.082, 0.5, torsoZ(0.082, 0.5) + 0.009]);
     }
   }
 
@@ -907,8 +965,8 @@ export class Character {
     this.head.add(H);
     if (hs === 0 || hs === 3) {
       this.add(H, hs === 0 ? g.brim : g.brimS, hatM, [0, 0, 0]);
-      this.add(H, hs === 0 ? g.crown : g.crownT, hatM, [0, hs === 0 ? 0.058 : 0.066, 0], null, [1, 1, 0.88]);
-      this.add(H, g.dent, shade, [0, hs === 0 ? 0.113 : 0.129, 0], null, [1, 0.5, 1]); // the pinched crease on top
+      this.add(H, hs === 0 ? g.crown : g.crownT, hatM, [0, hs === 0 ? 0.058 : 0.055, 0], null, [1, 1, 0.88]);
+      this.add(H, g.dent, shade, [0, hs === 0 ? 0.113 : 0.108, 0], null, [1, 0.5, hs === 0 ? 1 : 0.85]); // the pinched crease on top
       this.add(H, g.band, bandM, [0, 0.02, 0]);
     } else if (hs === 1) {
       this.add(H, g.brimS, hatM, [0, 0, 0], null, [1, 1, 1.05]);

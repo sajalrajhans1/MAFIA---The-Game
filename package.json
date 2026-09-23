@@ -1,0 +1,11 @@
+{
+  "name": "mafia-the-game",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A first-person noir Mafia card game in the browser. Solo against the regulars, or with friends.",
+  "scripts": {
+    "start": "npx --yes http-server -p 8080 -c-1 .",
+    "test": "node tests/server.test.js"
+  }
+}

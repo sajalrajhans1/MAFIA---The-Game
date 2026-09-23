@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MAFIA · A game of cards &amp; lies</title>
+<meta name="description" content="A first-person noir Mafia card game in your browser. Play solo against eleven scheming regulars or open a room for friends. Draw a Joker and you're Mafia, a King and you're the Sheriff, an Ace and you're the Angel.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MAFIA · A game of cards &amp; lies">
+<meta property="og:description" content="Sit at a smoky card table, draw your role, and find the Jokers before they find you. Solo against the regulars or with friends. Free, in your browser.">
+<meta property="og:image" content="assets/img/title.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MAFIA · A game of cards &amp; lies">
+<meta name="twitter:description" content="A first-person noir Mafia card game. Solo against the regulars or with friends. Free, in your browser.">
+<meta name="twitter:image" content="assets/img/title.jpg">
+<meta name="theme-color" content="#0a0506">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0506'/%3E%3Ctext x='16' y='25' font-size='24' text-anchor='middle' fill='%23e0323c'%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="gl" aria-label="The card table"></canvas>
+<div id="tags"></div>
+
+<div id="app">
+  <!-- ================================================= TITLE -->
+  <section id="title" class="screen active">
+    <div class="title-art"></div>
+    <div class="title-shade"></div>
+    <div class="title-col">
+      <div class="logo">
+        <div class="logo-kicker">A GAME OF CARDS &amp; LIES</div>
+        <h1 class="logo-main" data-text="MAFIA">MAFIA</h1>
+        <div class="logo-suits"><span>♠</span><span class="r">♥</span><span class="r">♦</span><span>♣</span></div>
+      </div>
+
+      <div class="panel menu">
+        <div class="who">
+          <div class="look-slot" id="lookSlot" title="Open the wardrobe"><canvas id="lookPreview" class="look-preview" aria-label="Your character"></canvas></div>
+          <div class="who-info">
+            <label class="field">
+              <span class="label">YOUR NAME</span>
+              <input id="nameIn" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Stranger">
+            </label>
+            <div class="who-sum" id="lookSum"></div>
+            <button id="btnWardrobe" class="btn small">WARDROBE</button>
+          </div>
+        </div>
+        <button id="btnSolo" class="btn big primary">SINGLE PLAYER</button>
+        <button id="btnFriends" class="btn big">PLAY WITH FRIENDS</button>
+        <button id="btnRejoin" class="btn hidden">REJOIN ROOM</button>
+        <div class="menu-row">
+          <button id="btnHow" class="btn">HOW TO PLAY</button>
+          <button id="btnOpts" class="btn">OPTIONS</button>
+        </div>
+      </div>
+      <div class="title-foot">SOLO VS THE REGULARS · OR 4–12 FRIENDS</div>
+    </div>
+  </section>
+
+  <!-- ================================================= LOBBY -->
+  <section id="lobby" class="screen">
+    <div class="col-left">
+      <div class="panel solocard hidden" id="soloCard">
+        <div class="label">SINGLE PLAYER</div>
+        <div class="solo-title">THE BACK ROOM</div>
+        <div class="solo-sub">You against the regulars.</div>
+        <div class="set-row"><span class="set-name">Opponents</span><span class="stepper"><button class="arrow" data-bots="-1">−</button><span id="setBots">7</span><button class="arrow" data-bots="1">+</button></span></div>
+        <div class="set-row wits-row"><span class="set-name">Their wits</span></div>
+        <div class="wits" id="wits"><button data-wits="0">ROOKIE</button><button data-wits="1">WISEGUY</button><button data-wits="2">MASTERMIND</button></div>
+        <div class="wits-hint" id="witsHint"></div>
+      </div>
+      <div class="panel roomcard" id="roomCard">
+        <div class="label">ROOM CODE</div>
+        <div class="code" id="roomCode">-----</div>
+        <div class="mode" id="roomMode"></div>
+        <button class="btn small" id="btnCopy">COPY INVITE LINK</button>
+      </div>
+      <div class="panel list-panel">
+        <div class="panel-title">AT THE TABLE <span id="lobbyCount"></span></div>
+        <ul class="roster" id="lobbyRoster"></ul>
+        <button class="btn small" id="btnWardrobe2">WARDROBE</button>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="panel settings" id="settingsPanel">
+        <div class="panel-title">HOUSE RULES <span class="hint" id="settingsWho"></span></div>
+        <div class="set-row">
+          <span class="set-name"><b class="joker">JOKERS</b> (Mafia)</span>
+          <span class="stepper"><button class="arrow" data-set="mafia" data-d="-1">−</button><span id="setMafia">1</span><button class="arrow" data-set="mafia" data-d="1">+</button></span>
+        </div>
+        <div class="balance" id="balance"></div>
+        <div class="set-row"><span class="set-name"><b class="king">KING</b> (Sheriff)</span><button class="toggle" data-set="sheriff"></button></div>
+        <div class="set-row"><span class="set-name"><b class="ace">ACE</b> (Angel)</span><button class="toggle" data-set="angel"></button></div>
+        <div class="set-row"><span class="set-name">Day talk</span><span class="stepper"><button class="arrow" data-set="dayTime" data-d="-1">−</button><span id="setDay"></span><button class="arrow" data-set="dayTime" data-d="1">+</button></span></div>
+        <div class="set-row"><span class="set-name">Voting</span><span class="stepper"><button class="arrow" data-set="voteTime" data-d="-1">−</button><span id="setVote"></span><button class="arrow" data-set="voteTime" data-d="1">+</button></span></div>
+        <div class="set-row"><span class="set-name">Night</span><span class="stepper"><button class="arrow" data-set="nightTime" data-d="-1">−</button><span id="setNight"></span><button class="arrow" data-set="nightTime" data-d="1">+</button></span></div>
+        <div class="set-row"><span class="set-name">Reveal card on death</span><button class="toggle" data-set="reveal"></button></div>
+        <div class="set-row"><span class="set-name">Angel may save self (once)</span><button class="toggle" data-set="selfSave"></button></div>
+        <div class="deck-line" id="deckLine"></div>
+      </div>
+    </div>
+    <div class="lobby-bottom">
+      <button class="btn big primary" id="btnStart">DEAL THE CARDS</button>
+      <div class="waiting" id="lobbyWait">Waiting for the host to deal<span class="dots"></span></div>
+    </div>
+  </section>
+
+  <!-- ================================================= GAME HUD -->
+  <section id="hud" class="screen">
+    <div class="phase-banner" id="phaseBanner">
+      <div class="phase-name" id="phaseName">NIGHT 1</div>
+      <div class="phase-sub" id="phaseSub"></div>
+      <div class="timer-wrap"><div class="timer" id="timer">0:00</div><div class="timer-bar"><i id="timerBar"></i></div></div>
+    </div>
+    <div class="col-left">
+      <div class="panel mycard" id="myCardPanel">
+        <div class="mycard-img" id="myCardImg" title="Look at your card"></div>
+        <div class="mycard-info">
+          <div class="label">YOUR CARD</div>
+          <div class="role-name" id="myRoleName">?</div>
+          <div class="role-hint" id="myRoleHint"></div>
+        </div>
+        <div class="notes" id="myNotes"></div>
+      </div>
+      <div class="panel list-panel">
+        <div class="panel-title">PLAYERS <span id="aliveCount"></span></div>
+        <ul class="roster" id="gameRoster"></ul>
+      </div>
+    </div>
+    <div class="action-bar" id="actionBar">
+      <div class="action-text" id="actionText"></div>
+      <div class="action-btns" id="actionBtns"></div>
+      <div class="emotes" id="emotes">
+        <button class="emote" data-e="nod" title="Nod">NOD</button>
+        <button class="emote" data-e="shake" title="Shake head">NO</button>
+        <button class="emote" data-e="shrug" title="Shrug">SHRUG</button>
+        <button class="emote" data-e="suspicious" title="Look suspicious">SUS</button>
+        <button class="emote" data-e="point" title="Point">POINT</button>
+      </div>
+    </div>
+    <div class="controls-hint" id="controlsHint">DRAG to look · CLICK a player · RIGHT-CLICK mark suspect · A/D turn · SPACE recenter · H hide HUD</div>
+  </section>
+
+  <!-- shared: top-right buttons, chat -->
+  <div class="topbar hidden" id="topbar">
+    <span class="room-tag" id="roomTag" title="Room code: friends who drop can rejoin with it"></span>
+    <button class="icon-btn hidden" id="btnSkip" title="Host: skip to next phase">⏭</button>
+    <button class="icon-btn" id="btnMute" title="Mute">♪</button>
+    <button class="icon-btn" id="btnOpts2" title="Options">⚙</button>
+    <button class="icon-btn" id="btnHow2" title="How to play">?</button>
+    <button class="icon-btn danger" id="btnLeave" title="Leave room">⎋</button>
+  </div>
+
+  <div class="panel chat hidden" id="chat">
+    <div class="chat-head"><span class="chan" id="chatChan">TOWN</span><button class="chat-min" id="chatMin" title="Collapse">_</button></div>
+    <div class="chat-log" id="chatLog"></div>
+    <form class="chat-form" id="chatForm" autocomplete="off">
+      <input id="chatIn" maxlength="240" placeholder="Say something...">
+      <button class="btn small" type="submit">SAY</button>
+    </form>
+  </div>
+
+  <!-- overlays -->
+  <div class="overlay hidden" id="reveal">
+    <div class="reveal-inner">
+      <div class="reveal-title" id="revealTitle">YOUR CARD</div>
+      <div class="flip-card" id="flipCard">
+        <div class="flip-inner">
+          <div class="flip-face flip-back" id="flipBack"></div>
+          <div class="flip-face flip-front" id="flipFront"></div>
+        </div>
+      </div>
+      <div class="reveal-hint" id="revealHint">Click the card to turn it over</div>
+      <div class="reveal-role hidden" id="revealRole">
+        <div class="reveal-role-name" id="revealRoleName"></div>
+        <p id="revealBlurb"></p>
+        <div class="reveal-extra" id="revealExtra"></div>
+      </div>
+      <div class="reveal-btns"><button class="btn big primary hidden" id="btnReady">I'M READY</button><button class="btn hidden" id="btnCloseReveal">CLOSE</button></div>
+    </div>
+  </div>
+
+  <div class="announce hidden" id="announce"><div class="announce-title" id="announceTitle"></div><div class="announce-text" id="announceText"></div></div>
+
+  <div class="sleep hidden" id="sleep">
+    <div class="zzz"><span>Z</span><span>z</span><span>z</span></div>
+    <div class="sleep-title">YOU ARE ASLEEP</div>
+    <div class="sleep-text" id="sleepText">The Jokers are choosing a victim...</div>
+  </div>
+
+  <div class="youdied hidden" id="youDied"><div>YOU HAVE BEEN<br><b>ELIMINATED</b></div><p>You're a ghost now. Watch the rest of the game and chat with the dead.</p></div>
+
+  <div class="overlay hidden" id="gameover">
+    <div class="panel gameover-box">
+      <div class="gameover-title" id="goTitle"></div>
+      <div class="gameover-text" id="goText"></div>
+      <div class="gameover-cards" id="goCards"></div>
+      <div class="gameover-btns"><button class="btn big primary" id="btnAgain">BACK TO LOBBY</button><button class="btn" id="btnGoView">VIEW TABLE</button><button class="btn danger" id="btnGoLeave">LEAVE</button></div>
+      <div class="waiting hidden" id="goWait">Waiting for the host<span class="dots"></span></div>
+    </div>
+  </div>
+
+  <div class="overlay wardrobe hidden" id="wardrobe">
+    <div class="wd-box panel">
+      <div class="wd-stage" id="wdStage">
+        <div class="wd-views"><button data-frame="face">FACE</button><button data-frame="bust">BUST</button><button data-frame="full">SEATED</button></div>
+        <div class="wd-hint">DRAG TO TURN · WHEEL TO ZOOM</div>
+      </div>
+      <div class="wd-side">
+        <h2>THE WARDROBE</h2>
+        <div class="wd-name" id="wdName"></div>
+        <div class="wd-tabs" id="wdTabs"><button data-tab="suit">SUIT</button><button data-tab="head">HAT &amp; HAIR</button><button data-tab="face">FACE</button></div>
+        <div class="wd-rows" id="wdRows"></div>
+        <div class="wd-btns"><button class="btn" id="wdRandom">RANDOMIZE</button><button class="btn" id="wdUndo">UNDO</button><button class="btn primary" id="wdDone">DONE</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="modal"><div class="panel modal-box" id="modalBox"></div></div>
+  <div class="toasts" id="toasts"></div>
+  <div class="loading hidden" id="loading"><div class="spinner">♠</div><div id="loadingText">CONNECTING...</div></div>
+</div>
+<div id="crt"></div>
+<noscript>This game needs JavaScript.</noscript>
+<script>
+  if (location.protocol === 'file:') {
+    document.getElementById('app').innerHTML = '<div class="overlay"><div class="panel modal-box"><h2>ONE MORE STEP</h2><p>Browsers block games opened straight from a file.</p><p>Run <kbd>python serve.py</kbd> in the game folder (or double-click <b>start.bat</b> on Windows), then open <b>http://localhost:8080</b>.</p></div></div>';
+  }
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

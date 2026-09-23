@@ -85,8 +85,9 @@ Opening `index.html` straight from disk won't work, because browsers block ES mo
 Upload the folder to any static host: GitHub Pages, Netlify, Vercel, Cloudflare Pages, or itch.io
 as an HTML game. On GitHub Pages: *Settings → Pages → Deploy from a branch → `main` / root*.
 
-For link previews on social media, change the two `og:image` / `twitter:image` tags in `index.html`
-to the full URL of `assets/img/title.jpg` on your domain.
+Link previews (Twitter/X, Discord, iMessage) use `assets/img/title.jpg` straight from this GitHub
+repository, so they work on any host. If you make the repository private, point the `og:image` and
+`twitter:image` tags in `index.html` at the image on your own domain instead.
 
 ## Graphics & performance
 
@@ -109,7 +110,7 @@ Each character is a handful of skinned meshes, which keeps the CPU cost low.
 - The host's browser runs the authoritative game and sends each player a personalised view,
   so hidden roles never reach anyone else's browser. In single player the same host also runs the
   regulars: a suspicion model built only from what each seat can know, a small language parser for
-  your chat, and a dictionary of well over a thousand lines of table talk.
+  your chat, and a dictionary of more than 1,600 lines of table talk.
 
 ```
 index.html          page shell and UI markup
@@ -117,7 +118,7 @@ css/style.css       retro UI
 js/main.js          app controller: modes, rooms, messages, wiring
 js/server.js        game rules and host logic
 js/bots.js          the regulars: knowledge, suspicion, planning, chat
-js/botlines.js      the cast and their lines   (+ botlines-more.js)
+js/botlines*.js     the cast and three books of their lines
 js/looks.js         wardrobe options
 js/characters.js    sculpted, skinned characters and their animation
 js/preview.js       the wardrobe stage

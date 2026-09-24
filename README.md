@@ -1,5 +1,7 @@
 # MAFIA · A game of cards & lies
 
+**Play it: https://mafiathegame.vercel.app**
+
 A first-person Mafia card game that runs in the browser. You sit at a smoky 1940s card table,
 you're dealt one card in secret, and that card is your role. **It's made to be played with real friends**:
 open a room and send them the link. There's also a single player mode against bots for practice.
@@ -94,8 +96,8 @@ command. Every push to `main` redeploys.
 - `vercel.json` sets the security headers (see below).
 - `.vercelignore` keeps development files (`tests/`, `serve.py`, `start.bat`, `package.json`, this README)
   off the live site.
-- Link previews use `assets/img/title.jpg`. Twitter/X needs an absolute URL: set the `og:image` and
-  `twitter:image` tags in `index.html` to `https://<your-domain>/assets/img/title.jpg`.
+- Live at **https://mafiathegame.vercel.app**. Link previews point at
+  `https://mafiathegame.vercel.app/assets/img/title.jpg`; update those tags in `index.html` if the domain changes.
 
 ## PC only
 
